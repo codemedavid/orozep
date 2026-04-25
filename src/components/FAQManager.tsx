@@ -326,11 +326,11 @@ const FAQManager: React.FC<FAQManagerProps> = ({ onBack }) => {
             </div>
 
             {/* Info Box */}
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <h4 className="font-medium text-blue-900 mb-2">💡 Database Setup</h4>
-                <p className="text-sm text-blue-700">
-                    To enable FAQ management, create a <code className="bg-blue-100 px-1 rounded">faqs</code> table in Supabase with columns:
-                    <code className="block bg-blue-100 p-2 rounded mt-2 text-xs">
+            <div className="bg-pink-50 border border-pink-200 rounded-xl p-4">
+                <h4 className="font-medium text-pink-900 mb-2">💡 Database Setup</h4>
+                <p className="text-sm text-pink-700">
+                    To enable FAQ management, create a <code className="bg-pink-100 px-1 rounded">faqs</code> table in Supabase with columns:
+                    <code className="block bg-pink-100 p-2 rounded mt-2 text-xs">
                         id (uuid), question (text), answer (text), category (text), order_index (int4), is_active (bool), created_at (timestamptz), updated_at (timestamptz)
                     </code>
                 </p>

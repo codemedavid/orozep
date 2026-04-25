@@ -47,7 +47,7 @@ export default function GuideManager() {
         preview: '',
         content: '',
         cover_image: null,
-        author: 'RSPEPTIDE Team',
+        author: 'Orozep PH Team',
         published_date: new Date().toISOString().split('T')[0],
         display_order: 0,
         is_enabled: true
@@ -97,7 +97,7 @@ export default function GuideManager() {
                 preview: '',
                 content: '',
                 cover_image: null,
-                author: 'RSPEPTIDE Team',
+                author: 'Orozep PH Team',
                 published_date: new Date().toISOString().split('T')[0],
                 display_order: maxOrder + 1,
                 is_enabled: true
@@ -114,7 +114,7 @@ export default function GuideManager() {
             preview: '',
             content: '',
             cover_image: null,
-            author: 'RSPEPTIDE Team',
+            author: 'Orozep PH Team',
             published_date: new Date().toISOString().split('T')[0],
             display_order: 0,
             is_enabled: true
@@ -312,10 +312,10 @@ export default function GuideManager() {
                                             </button>
                                             <button
                                                 onClick={() => openModal(article)}
-                                                className="p-2 hover:bg-blue-100 rounded-lg transition-colors"
+                                                className="p-2 hover:bg-pink-100 rounded-lg transition-colors"
                                                 title="Edit Article"
                                             >
-                                                <Edit2 className="w-4 h-4 text-blue-600" />
+                                                <Edit2 className="w-4 h-4 text-pink-600" />
                                             </button>
                                             <button
                                                 onClick={() => deleteArticle(article.id)}

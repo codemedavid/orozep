@@ -5,8 +5,8 @@
 @tailwind utilities;
 
 /* ─────────────────────────────────────────────
-   Pepbabe — Cute Holographic
-   Light Pink × Light Blue × Maroon
+   Orozep PH — Pink Clinical Glow
+   Pink × Rose × Maroon
 ───────────────────────────────────────────── */
 :root {
   --pink:        #F5A0BE;
@@ -14,10 +14,10 @@
   --pink-deep:   #E25C95;
   --pink-bg:     #FFEAF3;
 
-  --blue:        #7CB6E8;
-  --blue-light:  #C7E2FB;
-  --blue-deep:   #5294D5;
-  --blue-bg:     #E3F1FE;
+  --rose:        #F9B7D2;
+  --rose-light:  #FFEAF3;
+  --rose-deep:   #C73D7A;
+  --rose-bg:     #FFF7FB;
 
   --maroon:        #5B2828;
   --maroon-deep:   #421C1C;
@@ -34,7 +34,7 @@
 
   --border:      rgba(91,40,40,0.10);
   --border-pink: rgba(245,160,190,0.40);
-  --border-blue: rgba(124,182,232,0.35);
+  --border-rose: rgba(226,92,149,0.28);
 }
 
 @layer base {
@@ -56,34 +56,34 @@
 
 @layer components {
 
-  /* ── Primary CTA — Pink (cute primary) ── */
+  /* Primary CTA — pink gradient */
   .btn-mint {
     @apply inline-flex items-center justify-center gap-2 px-8 py-3.5
            rounded-full font-sans font-medium text-sm text-white
            transition-all duration-200 select-none tracking-wide;
-    background: linear-gradient(135deg, #F593BC 0%, #F5A0BE 50%, #82BBF0 100%);
+    background: linear-gradient(135deg, #F593BC 0%, #E25C95 52%, #C73D7A 100%);
     box-shadow: 0 4px 18px rgba(245,160,190,0.40);
     letter-spacing: 0.02em;
   }
   .btn-mint:hover {
-    background: linear-gradient(135deg, #E25C95 0%, #F593BC 50%, #5294D5 100%);
+    background: linear-gradient(135deg, #C73D7A 0%, #E25C95 50%, #9A2A5C 100%);
     box-shadow: 0 6px 24px rgba(245,160,190,0.50);
     transform: translateY(-1px);
   }
   .btn-mint:active { transform: translateY(0); }
 
-  /* ── Secondary — Light Blue ── */
+  /* Secondary — blush */
   .btn-pink {
     @apply inline-flex items-center justify-center gap-2 px-8 py-3.5
            rounded-full font-sans font-medium text-sm
            transition-all duration-200 select-none tracking-wide;
-    background: var(--blue-light);
+    background: var(--pink-bg);
     color: var(--maroon);
     letter-spacing: 0.02em;
-    border: 1px solid rgba(124,182,232,0.5);
+    border: 1px solid rgba(226,92,149,0.28);
   }
   .btn-pink:hover {
-    background: #A5CFF7;
+    background: #FCD3E5;
     transform: translateY(-1px);
   }
 
@@ -123,7 +123,7 @@
   }
   .card:hover {
     border-color: var(--border-pink);
-    box-shadow: 0 8px 32px rgba(245,160,190,0.18), 0 2px 8px rgba(124,182,232,0.10);
+    box-shadow: 0 8px 32px rgba(245,160,190,0.18), 0 2px 8px rgba(226,92,149,0.10);
     transform: translateY(-3px);
   }
 
@@ -148,7 +148,7 @@
   /* ── Divider ── */
   .divider {
     @apply w-12 h-px mx-auto;
-    background: linear-gradient(90deg, var(--pink-light), var(--blue-light));
+    background: linear-gradient(90deg, var(--pink-light), var(--pink-deep));
   }
 
   /* ── Tag / Pill ── */
@@ -159,16 +159,16 @@
   }
   .pill-mint {
     @apply inline-flex items-center gap-1.5 text-xs font-sans font-medium px-3 py-1 rounded-full;
-    background: var(--blue-bg);
-    color: var(--blue-deep);
+    background: var(--rose-bg);
+    color: var(--rose-deep);
   }
 
-  /* btn-primary alias → pink-blue gradient */
+  /* btn-primary alias */
   .btn-primary { @apply btn-mint; }
 
-  /* ── Holographic shimmer (matches logo) ── */
+  /* Pink shimmer */
   .holo-text {
-    background: linear-gradient(135deg, #F593BC 0%, #C7E2FB 35%, #F5A0BE 65%, #82BBF0 100%);
+    background: linear-gradient(135deg, #9A2A5C 0%, #E25C95 35%, #F593BC 65%, #C73D7A 100%);
     background-size: 200% 200%;
     -webkit-background-clip: text;
     background-clip: text;
@@ -177,7 +177,7 @@
   }
 
   .holo-bg {
-    background: linear-gradient(135deg, #FCD3E5 0%, #E3F1FE 50%, #FCD3E5 100%);
+    background: linear-gradient(135deg, #FFF7FB 0%, #FCD3E5 50%, #FFEAF3 100%);
     background-size: 200% 200%;
     animation: shimmer 8s ease-in-out infinite;
   }
@@ -208,8 +208,8 @@
 /* ── Scrollbar ── */
 ::-webkit-scrollbar        { width: 6px; }
 ::-webkit-scrollbar-track  { background: #FFEAF3; }
-::-webkit-scrollbar-thumb  { background: linear-gradient(180deg, #F9B7D2, #C7E2FB); border-radius: 8px; }
-::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #F593BC, #82BBF0); }
+::-webkit-scrollbar-thumb  { background: linear-gradient(180deg, #F9B7D2, #E25C95); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #F593BC, #C73D7A); }
 
 /* ── Selection ── */
 ::selection { background: #FCD3E5; color: var(--maroon); }

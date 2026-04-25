@@ -56,7 +56,7 @@
    ```
 
 2. **In Admin Tab:**
-   - Login with password: `Peptivate@Admin!2025`
+   - Login with password: `Orozep PH@Admin!2025`
    - Go to "Manage Products"
    - Edit any product
    - Change the price (e.g., ₱2,500 → ₱3,000)

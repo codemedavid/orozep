@@ -304,7 +304,7 @@ const CourierManager: React.FC<CourierManagerProps> = ({ onBack }) => {
 
                                             <button
                                                 onClick={() => handleEditCourier(courier)}
-                                                className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors duration-200 border border-blue-200"
+                                                className="p-2 text-pink-600 hover:text-pink-700 hover:bg-pink-50 rounded-lg transition-colors duration-200 border border-pink-200"
                                                 aria-label="Edit"
                                             >
                                                 <Edit className="h-4 w-4" />
@@ -327,12 +327,12 @@ const CourierManager: React.FC<CourierManagerProps> = ({ onBack }) => {
                 </div>
 
                 {/* Info Box */}
-                <div className="bg-blue-50 rounded-xl p-4 mt-6 border border-blue-100">
-                    <h3 className="font-bold text-blue-900 mb-2 flex items-center gap-2">
+                <div className="bg-pink-50 rounded-xl p-4 mt-6 border border-pink-100">
+                    <h3 className="font-bold text-pink-900 mb-2 flex items-center gap-2">
                         <Truck className="w-4 h-4" />
                         How it works
                     </h3>
-                    <ul className="text-sm text-blue-800 space-y-1">
+                    <ul className="text-sm text-pink-800 space-y-1">
                         <li>• Couriers appear in the order shipping dropdown</li>
                         <li>• Inactive couriers won't appear in order management</li>
                         <li>• Tracking URL uses {'{tracking}'} as the tracking number placeholder</li>

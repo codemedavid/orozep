@@ -2,7 +2,7 @@
 
 ## 📋 Overview
 
-The Admin Dashboard is a comprehensive management interface for the Peptivate.ph e-commerce platform. It provides full CRUD operations for products, categories, payment methods, orders, inventory, and site settings.
+The Admin Dashboard is a comprehensive management interface for the Orozep PH e-commerce platform. It provides full CRUD operations for products, categories, payment methods, orders, inventory, and site settings.
 
 **Location:** `/admin` route  
 **Component:** `src/components/AdminDashboard.tsx` (1,320 lines)  

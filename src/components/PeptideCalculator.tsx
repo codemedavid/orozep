@@ -120,7 +120,7 @@ const PeptideCalculator: React.FC = () => {
                                 {/* Syringe Type Selection */}
                                 <div className="space-y-2">
                                     <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
-                                        <Syringe className="w-4 h-4 text-purple-500" />
+                                        <Syringe className="w-4 h-4 text-pink-500" />
                                         Syringe Type
                                     </label>
                                     <select
@@ -165,7 +165,7 @@ const PeptideCalculator: React.FC = () => {
                                 {/* Water Added */}
                                 <div className="space-y-2">
                                     <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
-                                        <Droplets className="w-4 h-4 text-blue-500" />
+                                        <Droplets className="w-4 h-4 text-pink-500" />
                                         Bacteriostatic Water Added
                                     </label>
                                     <div className="relative">
@@ -241,7 +241,7 @@ const PeptideCalculator: React.FC = () => {
 
                         {/* Results Card */}
                         <div className={`bg-white rounded-2xl shadow-soft border border-gray-100 overflow-hidden transition-all duration-300 ${resultUnits !== null ? 'opacity-100 translate-y-0' : 'opacity-50 translate-y-4'}`}>
-                            <div className="px-6 py-8 bg-gradient-to-r from-blue-600 to-blue-700">
+                            <div className="px-6 py-8 bg-gradient-to-r from-pink-600 to-pink-700">
                                 <div className="text-center text-white">
                                     <p className="text-5xl md:text-6xl font-black mb-2">{resultUnits || '0'}</p>
                                     <p className="text-lg font-medium opacity-90">Units</p>
@@ -409,11 +409,11 @@ const PeptideCalculator: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="mt-12 p-6 bg-blue-50 rounded-xl border border-blue-100 animate-fadeIn">
+                    <div className="mt-12 p-6 bg-pink-50 rounded-xl border border-pink-100 animate-fadeIn">
                         <h3 className="font-bold text-navy-900 mb-2 flex items-center gap-2">
-                            <span className="bg-blue-100 p-1 rounded">ℹ️</span> Disclaimer
+                            <span className="bg-pink-100 p-1 rounded">ℹ️</span> Disclaimer
                         </h3>
-                        <p className="text-sm text-blue-800 leading-relaxed">
+                        <p className="text-sm text-pink-800 leading-relaxed">
                             This calculator is for educational and informational purposes only. It is not intended to be a substitute for professional medical advice, diagnosis, or treatment. Always verify calculations and consult with a qualified healthcare provider before administering any medication or peptide.
                         </p>
                     </div>

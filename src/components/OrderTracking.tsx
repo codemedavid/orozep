@@ -145,7 +145,7 @@ const OrderTracking: React.FC = () => {
                                     <h2 className="text-2xl font-bold capitalize flex items-center gap-2 text-white">
                                         {order.order_status === 'new' && <Clock className="w-6 h-6" />}
                                         {order.order_status === 'confirmed' && <CheckCircle className="w-6 h-6 text-gold-400" />}
-                                        {order.order_status === 'processing' && <Package className="w-6 h-6 text-blue-400" />}
+                                        {order.order_status === 'processing' && <Package className="w-6 h-6 text-pink-400" />}
                                         {order.order_status === 'shipped' && <Truck className="w-6 h-6 text-green-400" />}
                                         {order.order_status === 'delivered' && <CheckCircle className="w-6 h-6 text-green-500" />}
                                         {order.order_status === 'cancelled' && <AlertCircle className="w-6 h-6 text-red-500" />}
@@ -280,9 +280,9 @@ const OrderTracking: React.FC = () => {
 
                                     <div className="space-y-4">
                                         {order.shipping_note && (
-                                            <div className="bg-blue-50 rounded-xl p-5 border border-blue-100">
+                                            <div className="bg-pink-50 rounded-xl p-5 border border-pink-100">
                                                 <h3 className="font-bold text-navy-900 mb-2 flex items-center gap-2">
-                                                    <Package className="w-4 h-4 text-blue-600" />
+                                                    <Package className="w-4 h-4 text-pink-600" />
                                                     Shipping Update
                                                 </h3>
                                                 <p className="text-gray-700 text-sm leading-relaxed">{order.shipping_note}</p>

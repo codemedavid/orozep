@@ -1,4 +1,4 @@
--- Peptivate.ph Product Migration
+-- Orozep PH Product Migration
 -- Clear existing products and add new product lineup
 
 -- Clear existing data
@@ -245,10 +245,10 @@ SELECT
   50
 FROM products p WHERE p.name = 'Tirzepatide 30mg';
 
--- Update site settings for Peptivate.ph
-UPDATE site_settings SET value = 'Peptivate.ph' WHERE id = 'site_name';
+-- Update site settings for Orozep PH
+UPDATE site_settings SET value = 'Orozep PH' WHERE id = 'site_name';
 UPDATE site_settings SET value = 'Premium Peptide Solutions' WHERE id = 'site_tagline';
 UPDATE site_settings SET value = 'Premium research-grade peptides for scientific research purposes only.' WHERE id = 'site_description';
-UPDATE site_settings SET value = 'support@peptivate.ph' WHERE id = 'contact_email';
+UPDATE site_settings SET value = 'support@orozep-ph.ph' WHERE id = 'contact_email';
 UPDATE site_settings SET value = 'All peptides are sold strictly for research purposes only. Not intended for human consumption.' WHERE id = 'legal_disclaimer';
 

@@ -5,10 +5,10 @@ const Footer: React.FC = () => {
   return (
     <footer style={{ background: '#2D1212' }}>
 
-      {/* ── Pink-to-blue holographic top edge ── */}
+      {/* Pink gradient top edge */}
       <div
         className="h-1 w-full"
-        style={{ background: 'linear-gradient(90deg, #FCD3E5, #F593BC, #C7E2FB, #82BBF0, #C7E2FB, #F593BC, #FCD3E5)' }}
+        style={{ background: 'linear-gradient(90deg, #FCD3E5, #F593BC, #E25C95, #C73D7A, #E25C95, #F593BC, #FCD3E5)' }}
       />
 
       {/* ── Main content ── */}
@@ -18,19 +18,19 @@ const Footer: React.FC = () => {
           {/* Brand column */}
           <div className="lg:col-span-1">
             <img
-              src="/pepbabe-logo.jpg"
-              alt="Pepbabe"
+              src="/orozeplogo.jpg"
+              alt="Orozep PH"
               className="h-20 w-auto object-contain mb-5 rounded-2xl"
               style={{ boxShadow: '0 4px 24px rgba(245,160,190,0.35)' }}
             />
             <p className="font-sans text-sm leading-relaxed mb-2" style={{ color: 'rgba(255,255,255,0.65)' }}>
-              <span className="font-heading text-lg" style={{ color: '#FCD3E5' }}>Pepbabe</span> — peptide power, babe energy.
+              <span className="font-heading text-lg" style={{ color: '#FCD3E5' }}>Orozep PH</span> — premium pink peptide essentials.
             </p>
             <p className="font-sans text-sm leading-relaxed mb-5" style={{ color: 'rgba(255,255,255,0.45)' }}>
-              Cute, lab-tested peptides for the modern babe. Pharmaceutical-grade & delivered nationwide.
+              Lab-tested peptide essentials with third-party verification and nationwide delivery.
             </p>
             <div className="flex items-center gap-2 text-xs font-sans" style={{ color: 'rgba(255,255,255,0.45)' }}>
-              <Leaf className="w-3.5 h-3.5" style={{ color: '#C7E2FB' }} />
+              <Leaf className="w-3.5 h-3.5" style={{ color: '#F9B7D2' }} />
               99%+ Purity on every product
             </div>
           </div>
@@ -47,7 +47,7 @@ const Footer: React.FC = () => {
                     href="#"
                     className="font-sans text-sm transition-colors"
                     style={{ color: 'rgba(255,255,255,0.4)' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = '#C7E2FB'; }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = '#FCD3E5'; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.4)'; }}
                   >
                     {item}
@@ -104,7 +104,7 @@ const Footer: React.FC = () => {
                   border: '1px solid rgba(255,255,255,0.12)',
                   color: 'white',
                 }}
-                onFocus={e => { (e.currentTarget as HTMLInputElement).style.borderColor = 'rgba(170,229,204,0.4)'; }}
+                onFocus={e => { (e.currentTarget as HTMLInputElement).style.borderColor = 'rgba(245,160,190,0.45)'; }}
                 onBlur={e => { (e.currentTarget as HTMLInputElement).style.borderColor = 'rgba(255,255,255,0.12)'; }}
               />
               <button
@@ -128,7 +128,7 @@ const Footer: React.FC = () => {
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="container mx-auto px-5 md:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="font-sans text-xs" style={{ color: 'rgba(255,255,255,0.28)' }}>
-            © {new Date().getFullYear()} Pepbabe. All rights reserved.
+            © {new Date().getFullYear()} Orozep PH. All rights reserved.
           </p>
           <div className="flex items-center gap-5">
             {['Privacy Policy', 'Terms of Service', 'Shipping Policy'].map(item => (

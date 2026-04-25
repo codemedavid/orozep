@@ -385,9 +385,9 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'new': return 'bg-yellow-100 text-black border-yellow-400';
-      case 'confirmed': return 'bg-blue-100 text-black border-blue-300';
-      case 'processing': return 'bg-purple-100 text-black border-purple-300';
-      case 'shipped': return 'bg-indigo-100 text-black border-indigo-300';
+      case 'confirmed': return 'bg-pink-100 text-black border-pink-300';
+      case 'processing': return 'bg-pink-100 text-black border-pink-300';
+      case 'shipped': return 'bg-rose-100 text-black border-rose-300';
       case 'delivered': return 'bg-green-100 text-black border-green-300';
       case 'cancelled': return 'bg-red-100 text-black border-red-300';
       default: return 'bg-gray-100 text-black border-gray-300';
@@ -758,9 +758,9 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 md:gap-4">
             <div>
               <span className={`inline-flex items-center px-3 md:px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-semibold border ${order.order_status === 'new' ? 'bg-yellow-100 text-black border-yellow-400' :
-                order.order_status === 'confirmed' ? 'bg-blue-100 text-black border-blue-300' :
-                  order.order_status === 'processing' ? 'bg-purple-100 text-black border-purple-300' :
-                    order.order_status === 'shipped' ? 'bg-indigo-100 text-black border-indigo-300' :
+                order.order_status === 'confirmed' ? 'bg-pink-100 text-black border-pink-300' :
+                  order.order_status === 'processing' ? 'bg-pink-100 text-black border-pink-300' :
+                    order.order_status === 'shipped' ? 'bg-rose-100 text-black border-rose-300' :
                       order.order_status === 'delivered' ? 'bg-green-100 text-black border-green-300' :
                         'bg-red-100 text-black border-red-300'
                 }`}>
@@ -813,9 +813,9 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           </div>
 
           {/* Shipping & Tracking Details (Editable) */}
-          <div className="bg-blue-50 rounded-lg md:rounded-xl p-4 md:p-6 border border-blue-100">
+          <div className="bg-pink-50 rounded-lg md:rounded-xl p-4 md:p-6 border border-pink-100">
             <h3 className="font-bold text-navy-900 mb-4 flex items-center gap-2">
-              <Truck className="w-5 h-5 text-blue-600" />
+              <Truck className="w-5 h-5 text-pink-600" />
               Shipping & Tracking Details
             </h3>
             <div className="grid grid-cols-1 gap-4">
@@ -827,7 +827,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   <select
                     value={shippingProvider}
                     onChange={(e) => setShippingProvider(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-black bg-white"
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none text-black bg-white"
                   >
                     {couriers.filter(c => c.is_active).map(courier => (
                       <option key={courier.id} value={courier.code}>{courier.name}</option>
@@ -838,7 +838,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                     value={trackingNumber}
                     onChange={(e) => setTrackingNumber(e.target.value)}
                     placeholder={selectedCourier?.tracking_url_template ? "Enter tracking number" : "See App for details"}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-black"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none text-black"
                   />
                   {trackingUrl && (
                     <a
@@ -862,13 +862,13 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
                   value={shippingNote}
                   onChange={(e) => setShippingNote(e.target.value)}
                   placeholder="e.g., Shipped via J&T Express..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-black"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none text-black"
                 />
               </div>
               <button
                 onClick={() => onSaveTracking(order.id, trackingNumber, shippingProvider, shippingNote)}
                 disabled={isProcessing}
-                className="self-end px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition-colors shadow-sm disabled:opacity-50"
+                className="self-end px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-lg font-medium text-sm transition-colors shadow-sm disabled:opacity-50"
               >
                 {isProcessing ? 'Saving...' : 'Save Tracking Info'}
               </button>

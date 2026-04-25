@@ -15,7 +15,7 @@ try {
     if (typeof supabase !== 'undefined') {
         console.log('✅ Supabase client is loaded');
     } else {
-        console.error('❌ Supabase client NOT found. Make sure you\'re on the peptivate website.');
+        console.error('❌ Supabase client NOT found. Make sure you\'re on the orozep-ph website.');
     }
 } catch (e) {
     console.error('❌ Error checking Supabase:', e.message);

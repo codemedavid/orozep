@@ -43,7 +43,7 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartClick, onMenuClic
             onClick={() => { onMenuClick(); setMobileMenuOpen(false); }}
             className="flex items-center gap-3 flex-shrink-0 hover:opacity-80 transition-opacity"
           >
-            <img src="/pepbabe-logo.jpg" alt="Pepbabe" className="h-12 sm:h-14 w-auto object-contain" />
+            <img src="/orozeplogo.jpg" alt="Orozep PH" className="h-12 sm:h-14 w-auto object-contain rounded-xl" />
           </button>
 
           {/* Desktop nav */}
@@ -132,7 +132,7 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartClick, onMenuClic
               className="flex items-center justify-between px-5 py-4"
               style={{ borderBottom: '1px solid rgba(245,160,190,0.30)' }}
             >
-              <img src="/pepbabe-logo.jpg" alt="Pepbabe" className="h-12 w-auto" />
+              <img src="/orozeplogo.jpg" alt="Orozep PH" className="h-12 w-auto rounded-xl" />
               <button
                 onClick={() => setMobileMenuOpen(false)}
                 className="p-2 rounded-full transition-colors"

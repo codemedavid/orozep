@@ -1,4 +1,4 @@
-# 🎉 Peptivate.ph - Complete Setup Guide
+# 🎉 Orozep PH - Complete Setup Guide
 
 ## ✅ What's Been Completed
 
@@ -204,9 +204,9 @@ INSERT INTO payment_methods (id, name, account_number, account_name, qr_code_url
 
 -- Insert site settings
 INSERT INTO site_settings (id, value, type, description) VALUES
-('site_name', 'Peptivate.ph', 'text', 'Website name'),
+('site_name', 'Orozep PH', 'text', 'Website name'),
 ('site_tagline', 'Premium Peptide Solutions', 'text', 'Website tagline'),
-('contact_email', 'support@peptivate.ph', 'email', 'Contact email'),
+('contact_email', 'support@orozep-ph.ph', 'email', 'Contact email'),
 ('contact_phone', '+63-XXX-XXX-XXXX', 'text', 'Contact phone number'),
 ('min_order_amount', '1000.00', 'number', 'Minimum order amount'),
 ('free_shipping_threshold', '10000.00', 'number', 'Free shipping threshold');
@@ -227,7 +227,7 @@ CREATE TABLE IF NOT EXISTS coa_reports (
   verification_key TEXT NOT NULL,
   image_url TEXT NOT NULL,
   featured BOOLEAN DEFAULT false,
-  manufacturer TEXT DEFAULT 'Peptivate.ph',
+  manufacturer TEXT DEFAULT 'Orozep PH',
   laboratory TEXT DEFAULT 'Janoshik Analytical',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -297,7 +297,7 @@ Save your Janoshik test reports to:
 
 ### **Admin Pages:**
 - **/admin** - Admin dashboard
-  - Password: `Peptivate@Admin!2025`
+  - Password: `Orozep PH@Admin!2025`
   - Manage Products
   - Manage Categories
   - Payment Methods
@@ -385,7 +385,7 @@ Homepage shows:
 > "RESEARCH USE ONLY: ALWAYS CONSULT A LICENSED HEALTHCARE PROFESSIONAL FOR PERSONALISED MEDICAL GUIDANCE"
 
 ### **Security:**
-- Admin password: `Peptivate@Admin!2025`
+- Admin password: `Orozep PH@Admin!2025`
 - Change password in code if needed
 
 ---
@@ -401,7 +401,7 @@ If you need help:
 
 ## ✅ **You're All Set!**
 
-Your cute & aesthetic Peptivate.ph platform is ready to launch! 🎉💙✨
+Your cute & aesthetic Orozep PH platform is ready to launch! 🎉💙✨
 
 **Just complete the checklist above and you're good to go!** 🚀
 

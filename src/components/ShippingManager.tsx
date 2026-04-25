@@ -118,11 +118,11 @@ const ShippingManager: React.FC<ShippingManagerProps> = ({ onBack }) => {
 
                 {/* Database Setup Info */}
                 {locations.length === 0 && !error && (
-                    <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-4">
-                        <h4 className="font-medium text-blue-900 mb-2">💡 Database Setup</h4>
-                        <p className="text-sm text-blue-700">
+                    <div className="mb-4 bg-pink-50 border border-pink-200 rounded-xl p-4">
+                        <h4 className="font-medium text-pink-900 mb-2">💡 Database Setup</h4>
+                        <p className="text-sm text-pink-700">
                             To enable shipping location management, run the migration file:
-                            <code className="block bg-blue-100 p-2 rounded mt-2 text-xs">
+                            <code className="block bg-pink-100 p-2 rounded mt-2 text-xs">
                                 supabase/migrations/20250109000000_create_shipping_locations.sql
                             </code>
                         </p>
@@ -260,7 +260,7 @@ const ShippingManager: React.FC<ShippingManagerProps> = ({ onBack }) => {
                                             </button>
                                             <button
                                                 onClick={() => handleEdit(location)}
-                                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                                                className="p-2 text-pink-600 hover:bg-pink-50 rounded-lg"
                                             >
                                                 <Edit2 className="w-4 h-4" />
                                             </button>

@@ -79,7 +79,7 @@ Your products are organized as:
 
 ### Option 2: Via Admin Panel
 1. Go to `/admin`
-2. Login (password: `Peptivate@Admin!2025`)
+2. Login (password: `Orozep PH@Admin!2025`)
 3. Click **Manage Products**
 4. Click **Edit** on any product
 5. Scroll to "Product Image" section
@@ -91,7 +91,7 @@ Your products are organized as:
 
 ### Via Admin Panel (Easiest):
 1. Visit: `http://localhost:5173/admin`
-2. Login with: `Peptivate@Admin!2025`
+2. Login with: `Orozep PH@Admin!2025`
 3. Click **Manage Products**
 4. Edit any product:
    - Name

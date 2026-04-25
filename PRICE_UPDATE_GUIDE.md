@@ -1,4 +1,4 @@
-# Price Update Guide for Peptivate.ph Admin
+# Price Update Guide for Orozep PH Admin
 
 ## Understanding Product Prices vs. Variation Prices
 
@@ -30,7 +30,7 @@ Your Tirzepatide products currently have these variations:
 ### Steps to Update Variation Prices:
 
 1. **Login to Admin Dashboard**
-   - Password: `Peptivate@Admin!2025`
+   - Password: `Orozep PH@Admin!2025`
 
 2. **Navigate to Products**
    - Click "Manage Products" or the Products button

@@ -296,7 +296,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) =>
             });
 
             const orderDetails = `
-✨ PEPBABE - NEW ORDER
+✨ OROZEP PH - NEW ORDER
 
 📅 ORDER DATE & TIME
 ${dateTimeStamp}
@@ -887,7 +887,7 @@ Please confirm this order. Thank you!
                         <h2 className="font-heading text-lg font-bold text-charcoal-900 mb-3 flex items-center gap-2">
                             Choose Shipping Region *
                         </h2>
-                        <p className="text-xs text-gray-500 mb-6 bg-blue-50 p-3 rounded border border-blue-100">
+                        <p className="text-xs text-gray-500 mb-6 bg-pink-50 p-3 rounded border border-pink-100">
                             {selectedCourierId
                                 ? 'Select the rate applicable to your location.'
                                 : 'Please select a courier provider above first.'}

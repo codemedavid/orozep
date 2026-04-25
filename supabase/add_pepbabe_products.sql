@@ -1,5 +1,5 @@
 -- ============================================================================
--- Pepbabe — Add product catalog
+-- Orozep PH — Add product catalog
 -- Run this in your Supabase SQL Editor (or via `supabase db push` if migrating).
 -- Idempotent: safe to re-run; will not duplicate rows.
 -- All prices in PHP (₱).

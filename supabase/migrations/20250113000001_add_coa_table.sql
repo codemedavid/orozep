@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS coa_reports (
   verification_key TEXT NOT NULL,
   image_url TEXT NOT NULL, -- Can store base64 images or URLs
   featured BOOLEAN DEFAULT false,
-  manufacturer TEXT DEFAULT 'Peptivate.ph',
+  manufacturer TEXT DEFAULT 'Orozep PH',
   laboratory TEXT DEFAULT 'Janoshik Analytical',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()

@@ -89,7 +89,7 @@ vi.mock('../hooks/useCategories', () => ({
 vi.mock('../hooks/useSiteSettings', () => ({
   useSiteSettings: () => ({
     settings: {
-      site_name: 'Peptivate',
+      site_name: 'Orozep PH',
       site_logo: '',
       site_description: 'Premium peptides',
       currency: '₱',

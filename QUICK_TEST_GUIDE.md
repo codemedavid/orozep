@@ -14,7 +14,7 @@
    - Tab 2: `http://localhost:5173/admin` (Admin Dashboard)
 
 3. **In Admin Tab:**
-   - Login (password: `Peptivate@Admin!2025`)
+   - Login (password: `Orozep PH@Admin!2025`)
    - Click "Manage Products"
    - Click edit (✏️) on any product
    - Change the price (e.g., from ₱2,500 to ₱3,000)

@@ -26,7 +26,7 @@ When a product has variations, the system works like this:
 
 ### Step 1: Login to Admin
 Go to: `http://your-site.com/admin`  
-Password: `Peptivate@Admin!2025`
+Password: `Orozep PH@Admin!2025`
 
 ### Step 2: Click "Manage Products"
 Or click the "Products" button from dashboard

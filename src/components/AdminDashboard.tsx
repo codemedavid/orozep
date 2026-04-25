@@ -23,7 +23,7 @@ import ReviewsManager from './ReviewsManager';
 
 const AdminDashboard: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem('peptide_admin_auth') === 'true';
+    return localStorage.getItem('orozep_admin_auth') === 'true';
   });
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -414,9 +414,9 @@ const AdminDashboard: React.FC = () => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === 'pepbabe@Admin!123') {
+    if (password === 'orozep@Admin!123') {
       setIsAuthenticated(true);
-      localStorage.setItem('peptide_admin_auth', 'true');
+      localStorage.setItem('orozep_admin_auth', 'true');
       setLoginError('');
     } else {
       setLoginError('Invalid password');
@@ -425,7 +425,7 @@ const AdminDashboard: React.FC = () => {
 
   const handleLogout = () => {
     setIsAuthenticated(false);
-    localStorage.removeItem('peptide_admin_auth');
+    localStorage.removeItem('orozep_admin_auth');
     setPassword('');
     setCurrentView('dashboard');
   };
@@ -482,14 +482,14 @@ const AdminDashboard: React.FC = () => {
           <div className="text-center mb-6">
             <div className="mx-auto mb-4">
               <img
-                src="/pepbabe-logo.jpg"
-                alt="Pepbabe"
+                src="/orozeplogo.jpg"
+                alt="Orozep PH"
                 className="h-24 w-auto mx-auto object-contain rounded-2xl"
                 style={{ boxShadow: '0 8px 32px rgba(245,160,190,0.35)' }}
               />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-1">
-              <span className="holo-text">Pepbabe</span> Admin Access
+              <span className="holo-text">Orozep PH</span> Admin Access
             </h1>
             <p className="text-sm text-gray-400">
               Enter password to continue
@@ -701,13 +701,13 @@ const AdminDashboard: React.FC = () => {
                   </div>
 
                   {/* Auto-Generate Protocol Checkbox */}
-                  <div className="md:col-span-2 mt-2 bg-gradient-to-r from-purple-50 to-indigo-50 p-4 rounded-lg border border-purple-200">
+                  <div className="md:col-span-2 mt-2 bg-gradient-to-r from-pink-50 to-rose-50 p-4 rounded-lg border border-pink-200">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={autoGenerateProtocol}
                         onChange={(e) => setAutoGenerateProtocol(e.target.checked)}
-                        className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
+                        className="w-5 h-5 text-pink-600 rounded focus:ring-purple-500"
                       />
                       <div>
                         <span className="font-bold text-gray-800 flex items-center gap-2">
@@ -1275,19 +1275,19 @@ const AdminDashboard: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         {/* Bulk Generate Banner */}
-        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4">
+        <div className="bg-gradient-to-r from-pink-600 to-rose-600 text-white p-4">
           <div className="max-w-4xl mx-auto flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3">
-              <Sparkles className="w-5 h-5 text-purple-200" />
+              <Sparkles className="w-5 h-5 text-pink-200" />
               <div>
                 <h3 className="font-bold text-white">AI Protocol Assistant</h3>
-                <p className="text-xs text-purple-200">Generate protocols for all {products.length} products</p>
+                <p className="text-xs text-pink-200">Generate protocols for all {products.length} products</p>
               </div>
             </div>
             <button
               onClick={handleBulkGenerateProtocols}
               disabled={isProcessing}
-              className="bg-white text-purple-700 px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-purple-50 transition-colors disabled:opacity-50"
+              className="bg-white text-pink-700 px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-pink-50 transition-colors disabled:opacity-50"
             >
               {isProcessing ? 'Generating...' : '🤖 Bulk Generate All Protocols'}
             </button>
@@ -1393,8 +1393,8 @@ const AdminDashboard: React.FC = () => {
               <div className="flex items-center space-x-4">
                 <div className="h-10 flex items-center">
                   <img
-                    src="/pepbabe-logo.jpg"
-                    alt="Pepbabe"
+                    src="/orozeplogo.jpg"
+                    alt="Orozep PH"
                     className="h-12 w-auto object-contain"
                   />
                 </div>
@@ -1432,14 +1432,14 @@ const AdminDashboard: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <button
               onClick={() => setCurrentView('products')}
-              className="group relative overflow-hidden bg-white rounded-2xl p-5 border border-gray-200 hover:border-blue-500 hover:shadow-lg transition-all duration-300 text-left"
+              className="group relative overflow-hidden bg-white rounded-2xl p-5 border border-gray-200 hover:border-pink-500 hover:shadow-lg transition-all duration-300 text-left"
             >
               <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                <Package className="w-24 h-24 text-blue-600" />
+                <Package className="w-24 h-24 text-pink-600" />
               </div>
               <div className="relative z-10">
-                <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-                  <Package className="h-5 w-5 text-blue-600" />
+                <div className="w-10 h-10 rounded-lg bg-pink-50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+                  <Package className="h-5 w-5 text-pink-600" />
                 </div>
                 <p className="text-sm font-medium text-gray-500 mb-1">Total Products</p>
                 <p className="text-3xl font-bold text-gray-900 tracking-tight">{totalProducts}</p>
@@ -1480,14 +1480,14 @@ const AdminDashboard: React.FC = () => {
 
             <button
               onClick={() => setCurrentView('categories')}
-              className="group relative overflow-hidden bg-white rounded-2xl p-5 border border-gray-200 hover:border-purple-500 hover:shadow-lg transition-all duration-300 text-left"
+              className="group relative overflow-hidden bg-white rounded-2xl p-5 border border-gray-200 hover:border-pink-500 hover:shadow-lg transition-all duration-300 text-left"
             >
               <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                <Users className="w-24 h-24 text-purple-600" />
+                <Users className="w-24 h-24 text-pink-600" />
               </div>
               <div className="relative z-10">
-                <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-                  <Users className="h-5 w-5 text-purple-600" />
+                <div className="w-10 h-10 rounded-lg bg-pink-50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+                  <Users className="h-5 w-5 text-pink-600" />
                 </div>
                 <p className="text-sm font-medium text-gray-500 mb-1">Categories</p>
                 <p className="text-3xl font-bold text-gray-900 tracking-tight">{categories.length}</p>
@@ -1499,7 +1499,7 @@ const AdminDashboard: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
               <h3 className="text-lg font-bold text-gray-900 mb-5 flex items-center gap-2">
-                <div className="w-1 h-6 bg-blue-600 rounded-full"></div>
+                <div className="w-1 h-6 bg-pink-600 rounded-full"></div>
                 Quick Actions
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1507,11 +1507,11 @@ const AdminDashboard: React.FC = () => {
                   onClick={handleAddProduct}
                   className="group flex items-center gap-3 p-3 text-left hover:bg-gray-50 rounded-xl transition-all border border-transparent hover:border-gray-200"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <Plus className="h-5 w-5 text-blue-600" />
+                  <div className="w-10 h-10 rounded-lg bg-pink-50 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <Plus className="h-5 w-5 text-pink-600" />
                   </div>
                   <div>
-                    <span className="block text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">Add Product</span>
+                    <span className="block text-sm font-semibold text-gray-900 group-hover:text-pink-600 transition-colors">Add Product</span>
                     <span className="text-xs text-gray-500">Create new item</span>
                   </div>
                 </button>
@@ -1591,11 +1591,11 @@ const AdminDashboard: React.FC = () => {
                   onClick={() => setCurrentView('coa')}
                   className="group flex items-center gap-3 p-3 text-left hover:bg-gray-50 rounded-xl transition-all border border-transparent hover:border-gray-200"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <Shield className="h-5 w-5 text-indigo-600" />
+                  <div className="w-10 h-10 rounded-lg bg-rose-50 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <Shield className="h-5 w-5 text-rose-600" />
                   </div>
                   <div>
-                    <span className="block text-sm font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">Lab Results</span>
+                    <span className="block text-sm font-semibold text-gray-900 group-hover:text-rose-600 transition-colors">Lab Results</span>
                     <span className="text-xs text-gray-500">Manage COAs</span>
                   </div>
                 </button>
@@ -1664,14 +1664,14 @@ const AdminDashboard: React.FC = () => {
 
             <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
               <h3 className="text-lg font-bold text-gray-900 mb-5 flex items-center gap-2">
-                <div className="w-1 h-6 bg-purple-600 rounded-full"></div>
+                <div className="w-1 h-6 bg-pink-600 rounded-full"></div>
                 Categories
               </h3>
               <div className="space-y-1">
                 {categoryCounts.map((category, index) => {
                   const bgColors = [
-                    'bg-blue-100 text-blue-700',
-                    'bg-purple-100 text-purple-700',
+                    'bg-pink-100 text-pink-700',
+                    'bg-pink-100 text-pink-700',
                     'bg-emerald-100 text-emerald-700',
                     'bg-amber-100 text-amber-700',
                     'bg-rose-100 text-rose-700',
@@ -1687,8 +1687,8 @@ const AdminDashboard: React.FC = () => {
                   );
                 })}
               </div>
-              <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
-                <p className="text-xs text-blue-700 text-center leading-relaxed font-medium">
+              <div className="mt-6 p-4 bg-pink-50 rounded-xl border border-pink-100">
+                <p className="text-xs text-pink-700 text-center leading-relaxed font-medium">
                   Tip: Manage your categories inventory and product distribution from the "Categories" tab.
                 </p>
               </div>

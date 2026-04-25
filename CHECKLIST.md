@@ -11,7 +11,7 @@
 ### Step 1: Setup
 - [ ] Open browser tab 1: `http://localhost:5173` (Website)
 - [ ] Open browser tab 2: `http://localhost:5173/admin` (Admin)
-- [ ] Login to admin (password: `Peptivate@Admin!2025`)
+- [ ] Login to admin (password: `Orozep PH@Admin!2025`)
 
 ### Step 2: Make Changes
 - [ ] In admin: Click "Manage Products"

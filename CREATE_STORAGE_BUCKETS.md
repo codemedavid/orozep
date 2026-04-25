@@ -14,7 +14,7 @@ https://supabase.com/dashboard
 ```
 
 ### **2. Select Your Project**
-- Click on your Peptivate.ph project
+- Click on your Orozep PH project
 
 ### **3. Open Storage**
 - Click **"Storage"** in the left sidebar menu

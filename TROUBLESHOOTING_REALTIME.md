@@ -27,7 +27,7 @@ No subscription messages at all
 
 Open this file in your browser:
 ```
-/Users/ynadonaire/Desktop/peptivate/REALTIME_DIAGNOSTIC.html
+/Users/ynadonaire/Desktop/orozep-ph/REALTIME_DIAGNOSTIC.html
 ```
 
 This will test if Supabase Real-time is enabled.
@@ -37,7 +37,7 @@ This will test if Supabase Real-time is enabled.
 **This is probably your issue!** Real-time is NOT enabled by default.
 
 1. Go to [Supabase Dashboard](https://supabase.com/dashboard)
-2. Select your **peptivate** project
+2. Select your **orozep-ph** project
 3. Click **Database** in sidebar
 4. Click **Replication** (or **Publications** in older versions)
 5. Find these tables and **ENABLE** them:
@@ -172,7 +172,7 @@ This means **Real-time is NOT enabled**. Follow Issue 1 solution above.
 
 ```bash
 # Open this file in your browser:
-open /Users/ynadonaire/Desktop/peptivate/REALTIME_DIAGNOSTIC.html
+open /Users/ynadonaire/Desktop/orozep-ph/REALTIME_DIAGNOSTIC.html
 ```
 
 This will show you exactly what's wrong.

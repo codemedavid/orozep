@@ -97,13 +97,13 @@ const SiteSettingsManager: React.FC = () => {
     if (confirm('Are you sure you want to reset the homepage content to defaults?')) {
       setFormData(prev => ({
         ...prev,
-        hero_badge_text: 'Premium Peptide Solutions',
+        hero_badge_text: 'Premium Pink Peptide Essentials',
         hero_title_prefix: 'Premium',
         hero_title_highlight: 'Peptides',
         hero_title_suffix: '& Essentials',
         hero_subtext: 'From the Lab to You — Simplifying Science, One Dose at a Time.',
         hero_tagline: 'Quality-tested products. Reliable performance. Trusted by our community.',
-        hero_description: 'RSPEPTIDE provides research-grade peptides engineered for precision, purity, and consistency.',
+        hero_description: 'Orozep PH provides research-grade peptides engineered for precision, purity, and consistency.',
       }));
     }
   };
@@ -128,7 +128,7 @@ const SiteSettingsManager: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">Site Logo</label>
               <div className="flex items-center gap-4">
                 <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-100 border border-gray-200">
-                  <img src={logoPreview || '/logo.png'} alt="Logo" className="w-full h-full object-cover" />
+                  <img src={logoPreview || '/orozeplogo.jpg'} alt="Logo" className="w-full h-full object-cover" />
                 </div>
                 <label className="cursor-pointer bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3 py-1.5 rounded-md text-sm font-medium transition-colors">
                   Change
@@ -208,7 +208,7 @@ const SiteSettingsManager: React.FC = () => {
               value={formData.hero_badge_text}
               onChange={handleInputChange}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
-              placeholder="e.g. Premium Peptide Solutions"
+              placeholder="e.g. Premium Pink Peptide Essentials"
             />
           </div>
 

@@ -26,7 +26,7 @@ const Cart: React.FC<CartProps> = ({
       <div className="min-h-screen bg-white flex items-center justify-center px-4 py-12">
         <div className="text-center max-w-md">
           <div className="bg-white rounded-3xl p-12 border border-gray-100 shadow-clinical">
-            <div className="bg-clinical-blue w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="bg-brand-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
               <ShoppingBag className="w-10 h-10 text-charcoal-500" />
             </div>
             <h2 className="font-heading text-2xl font-bold text-charcoal-900 mb-3 flex items-center justify-center gap-2">
@@ -101,7 +101,7 @@ const Cart: React.FC<CartProps> = ({
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-charcoal-200 font-bold text-2xl bg-clinical-blue/30">
+                      <div className="w-full h-full flex items-center justify-center text-charcoal-200 font-bold text-2xl bg-brand-100">
                         {item.product.name.charAt(0)}
                       </div>
                     )}
@@ -239,7 +239,7 @@ const Cart: React.FC<CartProps> = ({
                 </div>
               </div>
 
-              <div className="bg-clinical-blue/30 rounded p-4 mb-6 border border-charcoal-100">
+              <div className="bg-brand-100 rounded p-4 mb-6 border border-charcoal-100">
                 <p className="text-xs text-charcoal-700 font-medium mb-2">Shipping Information:</p>
                 <ul className="text-xs text-gray-600 space-y-1">
                   <li className="flex justify-between"><span>Metro Manila</span> <span className="font-medium">₱150</span></li>

@@ -228,7 +228,7 @@ const COAManager: React.FC<COAManagerProps> = ({ onBack }) => {
       verification_key: '',
       image_url: '/coa/',
       featured: false,
-      manufacturer: 'RSPEPTIDE',
+      manufacturer: 'Orozep PH',
       laboratory: 'Janoshik Analytical',
     });
   };
@@ -294,9 +294,9 @@ const COAManager: React.FC<COAManagerProps> = ({ onBack }) => {
 
       {/* Add/Edit Form */}
       {(isAdding || editingId) && (
-        <div className="bg-gradient-to-br from-sky-50 to-blue-50 rounded-3xl p-6 border-2 border-sky-200 shadow-cute">
+        <div className="bg-gradient-to-br from-pink-50 to-pink-50 rounded-3xl p-6 border-2 border-pink-200 shadow-cute">
           <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-sky-500" />
+            <Sparkles className="w-5 h-5 text-pink-500" />
             {editingId ? 'Edit COA Report' : 'Add New COA Report'}
           </h3>
 
@@ -441,7 +441,7 @@ const COAManager: React.FC<COAManagerProps> = ({ onBack }) => {
                 id="featured"
                 checked={formData.featured}
                 onChange={(e) => setFormData({ ...formData, featured: e.target.checked })}
-                className="w-4 h-4 text-sky-500 rounded focus:ring-sky-400"
+                className="w-4 h-4 text-pink-500 rounded focus:ring-pink-400"
               />
               <label htmlFor="featured" className="text-sm font-medium text-gray-700">
                 Featured Report (show prominently)
@@ -451,7 +451,7 @@ const COAManager: React.FC<COAManagerProps> = ({ onBack }) => {
             <div className="flex gap-3 pt-2">
               <button
                 type="submit"
-                className="flex items-center gap-2 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white px-6 py-3 rounded-2xl font-medium transition-all shadow-lg"
+                className="flex items-center gap-2 bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white px-6 py-3 rounded-2xl font-medium transition-all shadow-lg"
               >
                 <Save className="w-5 h-5" />
                 {editingId ? 'Update Report' : 'Add Report'}
@@ -472,7 +472,7 @@ const COAManager: React.FC<COAManagerProps> = ({ onBack }) => {
       {/* COA Reports List */}
       <div className="space-y-4">
         {coaReports.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-3xl border-2 border-sky-100">
+          <div className="text-center py-12 bg-white rounded-3xl border-2 border-pink-100">
             <Shield className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500">No COA reports yet. Add your first lab report!</p>
           </div>
@@ -480,7 +480,7 @@ const COAManager: React.FC<COAManagerProps> = ({ onBack }) => {
           coaReports.map((report) => (
             <div
               key={report.id}
-              className="bg-white rounded-3xl p-6 border-2 border-sky-100 hover:border-sky-200 shadow-md hover:shadow-lg transition-all"
+              className="bg-white rounded-3xl p-6 border-2 border-pink-100 hover:border-pink-200 shadow-md hover:shadow-lg transition-all"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
@@ -489,7 +489,7 @@ const COAManager: React.FC<COAManagerProps> = ({ onBack }) => {
                       {report.product_name}
                     </h3>
                     {report.featured && (
-                      <span className="bg-gradient-to-r from-sky-100 to-blue-100 text-sky-700 px-3 py-1 rounded-full text-xs font-bold border border-sky-300">
+                      <span className="bg-gradient-to-r from-pink-100 to-pink-100 text-pink-700 px-3 py-1 rounded-full text-xs font-bold border border-pink-300">
                         ⭐ FEATURED
                       </span>
                     )}
@@ -502,7 +502,7 @@ const COAManager: React.FC<COAManagerProps> = ({ onBack }) => {
                     </div>
                     <div>
                       <span className="text-gray-500">Quantity:</span>
-                      <p className="font-bold text-sky-600">{report.quantity}</p>
+                      <p className="font-bold text-pink-600">{report.quantity}</p>
                     </div>
                     <div>
                       <span className="text-gray-500">Task Number:</span>
@@ -519,7 +519,7 @@ const COAManager: React.FC<COAManagerProps> = ({ onBack }) => {
                       href={`https://www.janoshik.com/verify/?key=${report.verification_key}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-sky-600 hover:text-sky-700 font-medium"
+                      className="flex items-center gap-1 text-pink-600 hover:text-pink-700 font-medium"
                     >
                       <ExternalLink className="w-4 h-4" />
                       Verify on Janoshik
@@ -532,7 +532,7 @@ const COAManager: React.FC<COAManagerProps> = ({ onBack }) => {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleEdit(report)}
-                    className="p-2 text-sky-600 hover:bg-sky-50 rounded-xl transition-all"
+                    className="p-2 text-pink-600 hover:bg-pink-50 rounded-xl transition-all"
                     title="Edit"
                   >
                     <Edit2 className="w-5 h-5" />

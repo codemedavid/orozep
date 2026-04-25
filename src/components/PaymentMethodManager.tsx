@@ -339,7 +339,7 @@ const PaymentMethodManager: React.FC<PaymentMethodManagerProps> = ({ onBack }) =
 
                       <button
                         onClick={() => handleEditMethod(method)}
-                        className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors duration-200 border border-blue-200"
+                        className="p-2 text-pink-600 hover:text-pink-700 hover:bg-pink-50 rounded-lg transition-colors duration-200 border border-pink-200"
                         aria-label="Edit"
                       >
                         <Edit className="h-4 w-4" />

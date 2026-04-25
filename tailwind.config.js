@@ -7,8 +7,8 @@ export default {
   theme: {
     extend: {
       colors: {
-        // ── Pepbabe — Cute Holographic ──
-        // Inspired by the iridescent vial logo: pastel pink × pastel blue × maroon
+        // ── Orozep PH — Pink Clinical Glow ──
+        // Pink-first palette with maroon contrast for readable medical commerce UI.
         'theme-bg':   '#FFF7FB',
         'theme-text': '#5B2828',
 
@@ -43,21 +43,20 @@ export default {
           900: '#5B1838',
         },
 
-        // Light Blue (secondary — baby/sky, holographic shimmer)
-        // Token name kept as "mint" so existing class references (bg-mint-100,
-        // text-mint-700, surface-mint, btn-mint, shadow-mint) still resolve.
+        // Soft rose secondary. Token name kept as "mint" so existing class references
+        // (bg-mint-100, text-mint-700, surface-mint, btn-mint, shadow-mint) still resolve.
         'mint': {
-          DEFAULT: '#7CB6E8',
-          50:  '#F4FAFF',
-          100: '#E3F1FE',
-          200: '#C7E2FB',
-          300: '#A5CFF7',
-          400: '#82BBF0',
-          500: '#7CB6E8',
-          600: '#5294D5',
-          700: '#3870AC',
-          800: '#285483',
-          900: '#1A395A',
+          DEFAULT: '#F9B7D2',
+          50:  '#FFF7FB',
+          100: '#FFEAF3',
+          200: '#FCD3E5',
+          300: '#F9B7D2',
+          400: '#F593BC',
+          500: '#F5A0BE',
+          600: '#E25C95',
+          700: '#C73D7A',
+          800: '#9A2A5C',
+          900: '#5B1838',
         },
 
         // Maroon (text & dark surfaces — matches logo lettering)
@@ -94,11 +93,11 @@ export default {
         'cream':         '#FFF7FB',
         'warm-white':    '#FFF0F7',
         'surface':       '#FFEAF3',
-        'surface-mint':  '#E3F1FE', // light blue surface
+        'surface-mint':  '#FFEAF3',
         'gold':          '#8B4423', // logo copper-maroon accent
         'maroon':        '#6B2C2C',
         'maroon-light':  '#8B3A3A',
-        'baby-blue':     '#C7E2FB',
+        'baby-pink':     '#FCD3E5',
         'blush':         '#FCD3E5',
       },
 
@@ -122,7 +121,7 @@ export default {
         'md':      '0 4px 20px rgba(91,40,40,0.09)',
         'lg':      '0 8px 36px rgba(91,40,40,0.10)',
         'pink':    '0 6px 24px rgba(245,160,190,0.32)',
-        'mint':    '0 6px 24px rgba(124,182,232,0.32)', // light blue glow
+        'mint':    '0 6px 24px rgba(226,92,149,0.24)',
         'card':    '0 0 0 1px rgba(91,40,40,0.06), 0 4px 18px rgba(245,160,190,0.10)',
       },
 
