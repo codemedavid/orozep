@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlaskConical, Truck, HelpCircle, FileText, BookOpen, Leaf, Mail } from 'lucide-react';
+import { FlaskConical, Truck, HelpCircle, FileText, BookOpen, Leaf } from 'lucide-react';
 
 const Footer: React.FC = () => {
   return (
@@ -13,7 +13,7 @@ const Footer: React.FC = () => {
 
       {/* ── Main content ── */}
       <div className="container mx-auto px-5 md:px-8 pt-16 pb-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 lg:gap-8">
 
           {/* Brand column */}
           <div className="lg:col-span-1">
@@ -86,41 +86,6 @@ const Footer: React.FC = () => {
             </ul>
           </div>
 
-          {/* Newsletter */}
-          <div>
-            <h4 className="font-sans font-semibold text-sm mb-5 tracking-wide" style={{ color: 'rgba(255,255,255,0.9)' }}>
-              Stay Updated
-            </h4>
-            <p className="font-sans text-sm leading-relaxed mb-4" style={{ color: 'rgba(255,255,255,0.4)' }}>
-              New peptides, protocols, and exclusive offers — delivered to your inbox.
-            </p>
-            <div className="flex gap-2 mb-2">
-              <input
-                type="email"
-                placeholder="your@email.com"
-                className="flex-1 min-w-0 text-sm font-sans px-3.5 py-2.5 rounded-xl focus:outline-none transition-colors"
-                style={{
-                  background: 'rgba(255,255,255,0.07)',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  color: 'white',
-                }}
-                onFocus={e => { (e.currentTarget as HTMLInputElement).style.borderColor = 'rgba(245,160,190,0.45)'; }}
-                onBlur={e => { (e.currentTarget as HTMLInputElement).style.borderColor = 'rgba(255,255,255,0.12)'; }}
-              />
-              <button
-                className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-xl text-white transition-colors"
-                style={{ background: '#E25C95' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#C73D7A'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#E25C95'; }}
-                aria-label="Subscribe"
-              >
-                <Mail className="w-4 h-4" />
-              </button>
-            </div>
-            <p className="font-sans text-[11px]" style={{ color: 'rgba(255,255,255,0.22)' }}>
-              No spam. Unsubscribe anytime.
-            </p>
-          </div>
         </div>
       </div>
 
