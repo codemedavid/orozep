@@ -35,7 +35,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) =>
 
     // Payment
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
-    const [contactMethod, setContactMethod] = useState<'whatsapp'>('whatsapp');
+    const [contactMethod, setContactMethod] = useState<'whatsapp' | 'viber'>('whatsapp');
     const [notes, setNotes] = useState('');
 
     const [orderMessage, setOrderMessage] = useState<string>('');
@@ -347,7 +347,7 @@ ${paymentMethod?.name || 'N/A'}
 ${paymentProofUrl ? 'Screenshot attached to order.' : 'Pending'}
 
 📱 CONTACT METHOD
-WhatsApp (+63 976 522 6036)
+WhatsApp / Viber (+63 917 996 6191) or Facebook Messenger (m.me/britt.arellano.7)
 
 📋 ORDER NUMBER: ${customOrderNumber}
 
@@ -369,7 +369,7 @@ Please confirm this order. Thank you!
 
             // Auto-open WhatsApp
             setTimeout(() => {
-                const whatsappUrl = `https://wa.me/639765226036?text=${encodeURIComponent(orderDetails)}`;
+                const whatsappUrl = `https://wa.me/639179966191?text=${encodeURIComponent(orderDetails)}`;
                 window.open(whatsappUrl, '_blank');
             }, 1500);
         } catch (error) {
@@ -391,8 +391,23 @@ Please confirm this order. Thank you!
     };
 
     const handleOpenContact = () => {
-        const contactUrl = `https://wa.me/639765226036?text=${encodeURIComponent(orderMessage)}`;
+        const contactUrl = `https://wa.me/639179966191?text=${encodeURIComponent(orderMessage)}`;
         window.open(contactUrl, '_blank');
+    };
+
+    const handleOpenViber = () => {
+        const viberUrl = `viber://chat?number=%2B639179966191`;
+        window.open(viberUrl, '_blank');
+    };
+
+    const handleOpenMessenger = async () => {
+        try {
+            await navigator.clipboard.writeText(orderMessage);
+            setCopied(true);
+        } catch (err) {
+            console.error('Failed to copy before opening Messenger:', err);
+        }
+        window.open('https://m.me/britt.arellano.7', '_blank');
     };
 
     if (step === 'confirmation') {
@@ -468,8 +483,24 @@ Please confirm this order. Thank you!
                                 Open WhatsApp & Send
                             </button>
 
+                            <button
+                                onClick={handleOpenViber}
+                                className="w-full py-4 text-base flex items-center justify-center gap-2 shadow-lg rounded bg-[#7360f2] hover:bg-[#5d4dd1] text-white font-medium transition-all"
+                            >
+                                <MessageCircle className="w-5 h-5" />
+                                Open Viber & Send
+                            </button>
+
+                            <button
+                                onClick={handleOpenMessenger}
+                                className="w-full py-4 text-base flex items-center justify-center gap-2 shadow-lg rounded bg-[#0084ff] hover:bg-[#006fdb] text-white font-medium transition-all"
+                            >
+                                <MessageCircle className="w-5 h-5" />
+                                Open Messenger & Paste
+                            </button>
+
                             <p className="text-sm text-gray-500">
-                                If WhatsApp doesn't open automatically, please send the copied message to <span className="font-bold">+63 976 522 6036 on WhatsApp</span>
+                                Your order details are auto-copied. If no app opens, send the copied message to <span className="font-bold">+63 917 996 6191 on WhatsApp/Viber</span> or <span className="font-bold">m.me/britt.arellano.7 on Messenger</span>.
                             </p>
                         </div>
 
