@@ -924,21 +924,21 @@ Please confirm this order. Thank you!
                                 : 'Please select a courier provider above first.'}
                         </p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {shippingLocations
-                                .filter(loc => {
-                                    if (!selectedCourierId) return false;
-                                    const courier = couriers.find(c => c.id === selectedCourierId);
-                                    if (!courier) return false;
+                            {(() => {
+                                if (!selectedCourierId) return [];
+                                const courier = couriers.find(c => c.id === selectedCourierId);
+                                if (!courier) return [];
 
-                                    // Match logic:
-                                    // 1. If location ID explicitly contains courier code (e.g. LBC_METRO contains LBC)
-                                    // 2. Or check against common patterns if codes don't strictly match
-                                    const code = courier.code.toLowerCase();
-                                    const locId = loc.id.toLowerCase();
-                                    const locName = loc.name.toLowerCase();
+                                const code = courier.code.toLowerCase();
+                                const matched = shippingLocations.filter(loc =>
+                                    loc.id.toLowerCase().includes(code) ||
+                                    loc.name.toLowerCase().includes(code)
+                                );
 
-                                    return locId.includes(code) || locName.includes(code);
-                                })
+                                // Fallback: if no locations match this courier's code,
+                                // show all active locations so the user isn't stuck.
+                                return matched.length > 0 ? matched : shippingLocations;
+                            })()
                                 .map((loc) => (
                                     <button
                                         key={loc.id}
