@@ -1,0 +1,2 @@
+INSERT INTO public.review_products (id, review_id, product_id) VALUES ('64e9547b-3185-4b57-8b47-0bf5ddf1daa6', '53e8fd74-4143-413d-8704-71781c47e6b6', '02a30ee3-4c84-443b-85dc-c9ae72280775') ON CONFLICT DO NOTHING;
+INSERT INTO public.review_products (id, review_id, product_id) VALUES ('5ba1d962-3737-4359-8702-fefca4cbc0da', '53e8fd74-4143-413d-8704-71781c47e6b6', '6eb1f6f7-0363-4637-9ac0-99378957c3e0') ON CONFLICT DO NOTHING;
