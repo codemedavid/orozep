@@ -20,11 +20,12 @@ const ProtocolGuide = lazy(() => import('./components/ProtocolGuide'));
 const ReviewsPage = lazy(() => import('./components/ReviewsPage'));
 
 import { useMenu } from './hooks/useMenu';
-// import { useCOAPageSetting } from './hooks/useCOAPageSetting';
+import { useCOAPageSetting } from './hooks/useCOAPageSetting';
 
 function MainApp() {
     const cart = useCart();
     const { menuItems, refreshProducts } = useMenu();
+    const { coaPageEnabled } = useCOAPageSetting();
     const [currentView, setCurrentView] = useState<'menu' | 'cart' | 'checkout'>('menu');
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
@@ -49,6 +50,7 @@ function MainApp() {
                 cartItemsCount={cart.getTotalItems()}
                 onCartClick={() => handleViewChange('cart')}
                 onMenuClick={() => handleViewChange('menu')}
+                coaEnabled={coaPageEnabled}
             />
 
             {currentView === 'menu' && (
@@ -101,14 +103,14 @@ function MainApp() {
 
 
 function App() {
-    //   const { coaPageEnabled } = useCOAPageSetting();
+    const { coaPageEnabled } = useCOAPageSetting();
 
     return (
         <Router>
             <Suspense fallback={<LoadingSpinner />}>
                 <Routes>
                     <Route path="/" element={<MainApp />} />
-                    <Route path="/coa" element={<COA />} />
+                    {coaPageEnabled && <Route path="/coa" element={<COA />} />}
                     <Route path="/faq" element={<FAQ />} />
                     <Route path="/calculator" element={<PeptideCalculator />} />
                     <Route path="/track-order" element={<OrderTracking />} />

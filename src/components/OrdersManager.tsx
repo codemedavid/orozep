@@ -528,7 +528,7 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 md:w-5 md:h-5" />
               <input
                 type="text"
-                placeholder="Search by customer name, email, phone, or order ID..."
+                placeholder="Search by customer name, Facebook/WhatsApp name, phone, or order ID..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-9 md:pl-10 pr-3 md:pr-4 py-2 text-sm md:text-base border-2 border-gray-200 rounded-lg focus:border-navy-900 focus:outline-none focus:ring-2 focus:ring-gold-500/20 transition-colors text-black"
@@ -785,7 +785,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             <h3 className="font-bold text-gray-900 mb-2 md:mb-3 text-sm md:text-base">Customer Information</h3>
             <div className="bg-gray-50 rounded-lg p-3 md:p-4 space-y-1.5 md:space-y-2 text-xs md:text-sm text-gray-900">
               <p><span className="font-semibold">Name:</span> {order.customer_name}</p>
-              <p><span className="font-semibold">Email:</span> {order.customer_email}</p>
+              <p><span className="font-semibold">Facebook / WhatsApp Name:</span> {order.customer_email}</p>
               <p><span className="font-semibold">Phone:</span> {order.customer_phone}</p>
               {order.contact_method && (
                 <p className="flex items-center gap-2 flex-wrap">

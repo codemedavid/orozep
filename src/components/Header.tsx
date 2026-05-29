@@ -5,9 +5,10 @@ interface HeaderProps {
   cartItemsCount: number;
   onCartClick: () => void;
   onMenuClick: () => void;
+  coaEnabled?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartClick, onMenuClick }) => {
+const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartClick, onMenuClick, coaEnabled = true }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -17,7 +18,7 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartClick, onMenuClic
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const navLinks = [
+  const allNavLinks = [
     { label: 'Products',    href: undefined,        isButton: true,  icon: FlaskConical },
     { label: 'Track Order', href: '/track-order',   isButton: false, icon: Truck },
     { label: 'FAQ',         href: '/faq',           isButton: false, icon: HelpCircle },
@@ -25,6 +26,8 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartClick, onMenuClic
     { label: 'Protocols',   href: '/protocols',     isButton: false, icon: BookOpen },
     { label: 'Reviews',     href: '/reviews',       isButton: false, icon: Star },
   ];
+
+  const navLinks = allNavLinks.filter(link => link.label !== 'COA' || coaEnabled);
 
   return (
     <>

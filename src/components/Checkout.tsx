@@ -347,7 +347,7 @@ ${paymentMethod?.name || 'N/A'}
 ${paymentProofUrl ? 'Screenshot attached to order.' : 'Pending'}
 
 📱 CONTACT METHOD
-WhatsApp / Viber (+63 917 996 6191) or Facebook Messenger (m.me/britt.arellano.7)
+WhatsApp / Viber (+63 917 996 6191)
 
 📋 ORDER NUMBER: ${customOrderNumber}
 
@@ -779,14 +779,14 @@ Please confirm this order. Thank you!
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-brand-700 uppercase tracking-wide mb-2">
-                                        Email Address *
+                                        Facebook or WhatsApp Name *
                                     </label>
                                     <input
-                                        type="email"
+                                        type="text"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         className="input-field"
-                                        placeholder="juan@example.com"
+                                        placeholder="e.g. Juan Dela Cruz"
                                         required
                                     />
                                 </div>
