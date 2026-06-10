@@ -117,7 +117,7 @@ describe('Checkout - Place Order Flow', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockSingle.mockResolvedValue({
-            data: { id: 'order-1', order_number: 'BRC-1234' },
+            data: { id: 'order-1', order_number: 'ORZ-1234' },
             error: null,
         });
     });

@@ -220,11 +220,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) =>
                 };
             });
 
-            // Generate order number before saving
-            const randomDigits = Math.floor(Math.random() * 9000 + 1000); // 1000-9999
-            const customOrderNumber = `BRC-${randomDigits}`;
-
-            // Save order to database
+            // Save order to database; the DB trigger assigns a unique order_number
             const { data: orderData, error: orderError } = await supabase
                 .from('orders')
                 .insert([{
@@ -250,8 +246,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) =>
                     payment_status: 'pending',
                     promo_code_id: appliedPromo?.id || null,
                     promo_code: appliedPromo?.code || null,
-                    discount_applied: discountAmount,
-                    order_number: customOrderNumber
+                    discount_applied: discountAmount
                 }])
                 .select()
                 .single();
@@ -280,6 +275,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) =>
 
             console.log('✅ Order saved to database:', orderData);
 
+            const customOrderNumber = orderData.order_number as string;
             setOrderNumber(customOrderNumber);
 
             // Get current date and time
