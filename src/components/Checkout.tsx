@@ -11,9 +11,10 @@ interface CheckoutProps {
     cartItems: CartItem[];
     totalPrice: number;
     onBack: () => void;
+    validateCart: () => Promise<string[]>;
 }
 
-const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) => {
+const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack, validateCart }) => {
     const { paymentMethods } = usePaymentMethods();
     const { locations: shippingLocations } = useShippingLocations();
     const { couriers } = useCouriers();
@@ -186,6 +187,14 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack }) =>
         const paymentMethod = paymentMethods.find(pm => pm.id === selectedPaymentMethod);
 
         try {
+            // 0. Make sure every cart item still exists and is available
+            const removedItems = await validateCart();
+            if (removedItems.length > 0) {
+                alert(`Some items in your cart are no longer available and have been removed:\n\n• ${removedItems.join('\n• ')}\n\nPlease review your cart before placing the order.`);
+                onBack();
+                return;
+            }
+
             // 1. Upload Payment Proof First
             let paymentProofUrl = null;
             if (paymentProof) {

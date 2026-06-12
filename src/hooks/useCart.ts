@@ -1,19 +1,85 @@
 import { useState, useEffect } from 'react';
 import type { CartItem, Product, ProductVariation } from '../types';
+import { supabase } from '../lib/supabase';
+
+// Checks cart items against the database and drops products that have been
+// deleted or marked unavailable (and items whose variation no longer exists).
+async function filterValidCartItems(items: CartItem[]): Promise<{ validItems: CartItem[]; removedNames: string[] }> {
+  if (items.length === 0) {
+    return { validItems: items, removedNames: [] };
+  }
+
+  const productIds = [...new Set(items.map(item => item.product.id))];
+  const { data: products, error } = await supabase
+    .from('products')
+    .select('id, available')
+    .in('id', productIds);
+
+  if (error) {
+    console.error('Error validating cart products:', error);
+    return { validItems: items, removedNames: [] };
+  }
+
+  const availableProductIds = new Set((products || []).filter(p => p.available).map(p => p.id));
+
+  const variationIds = items.filter(item => item.variation).map(item => item.variation!.id);
+  let existingVariationIds = new Set<string>();
+  if (variationIds.length > 0) {
+    const { data: variations, error: variationError } = await supabase
+      .from('product_variations')
+      .select('id')
+      .in('id', variationIds);
+
+    if (variationError) {
+      console.error('Error validating cart variations:', variationError);
+      existingVariationIds = new Set(variationIds);
+    } else {
+      existingVariationIds = new Set((variations || []).map(v => v.id));
+    }
+  }
+
+  const validItems: CartItem[] = [];
+  const removedNames: string[] = [];
+
+  for (const item of items) {
+    const productValid = availableProductIds.has(item.product.id);
+    const variationValid = !item.variation || existingVariationIds.has(item.variation.id);
+
+    if (productValid && variationValid) {
+      validItems.push(item);
+    } else {
+      removedNames.push(`${item.product.name}${item.variation ? ` (${item.variation.name})` : ''}`);
+    }
+  }
+
+  return { validItems, removedNames };
+}
 
 export function useCart() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
-  // Load cart from localStorage on mount
+  // Load cart from localStorage on mount, then prune deleted/unavailable products
   useEffect(() => {
     const savedCart = localStorage.getItem('peptide_cart');
-    if (savedCart) {
-      try {
-        setCartItems(JSON.parse(savedCart));
-      } catch (error) {
-        console.error('Error loading cart from localStorage:', error);
-      }
+    if (!savedCart) return;
+
+    let cancelled = false;
+    try {
+      const savedItems: CartItem[] = JSON.parse(savedCart);
+      setCartItems(savedItems);
+
+      filterValidCartItems(savedItems).then(({ validItems, removedNames }) => {
+        if (!cancelled && removedNames.length > 0) {
+          setCartItems(validItems);
+        }
+      });
+    } catch (error) {
+      console.error('Error loading cart from localStorage:', error);
     }
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Save cart to localStorage whenever it changes
@@ -112,6 +178,16 @@ export function useCart() {
     return cartItems.reduce((total, item) => total + item.quantity, 0);
   };
 
+  // Re-checks the cart against the database, removes invalid items,
+  // and returns the names of the items that were removed.
+  const validateCart = async (): Promise<string[]> => {
+    const { validItems, removedNames } = await filterValidCartItems(cartItems);
+    if (removedNames.length > 0) {
+      setCartItems(validItems);
+    }
+    return removedNames;
+  };
+
   return {
     cartItems,
     addToCart,
@@ -119,6 +195,7 @@ export function useCart() {
     removeFromCart,
     clearCart,
     getTotalPrice,
-    getTotalItems
+    getTotalItems,
+    validateCart
   };
 }

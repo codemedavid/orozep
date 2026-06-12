@@ -84,6 +84,7 @@ function MainApp() {
                         cartItems={cart.cartItems}
                         totalPrice={cart.getTotalPrice()}
                         onBack={() => handleViewChange('cart')}
+                        validateCart={cart.validateCart}
                     />
                 )}
             </main>
