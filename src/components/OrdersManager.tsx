@@ -167,7 +167,10 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
     try {
       setIsProcessing(true);
 
-      // First, check if all items are still in stock
+      // First, check if all items are still in stock.
+      // Items whose product/variation has been deleted are skipped here — we
+      // can't deduct stock that no longer exists, so the order can still be
+      // confirmed using the snapshot stored in order_items.
       for (const item of order.order_items) {
         if (item.variation_id) {
           // Check variation stock
@@ -179,7 +182,7 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
 
           if (varError) {
             if (varError.code === 'PGRST116') {
-              throw new Error(`Variation "${item.variation_name}" not found. It may have been deleted.`);
+              continue; // Variation deleted — skip stock check for this item
             }
             throw varError;
           }
@@ -198,7 +201,7 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
 
           if (prodError) {
             if (prodError.code === 'PGRST116') {
-              throw new Error(`Product "${item.product_name}" not found. It may have been deleted.`);
+              continue; // Product deleted — skip stock check for this item
             }
             throw prodError;
           }
@@ -209,7 +212,8 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
         }
       }
 
-      // Deduct stock for each item
+      // Deduct stock for each item. Deleted products/variations are skipped
+      // (nothing to deduct) so a confirm never fails because of them.
       for (const item of order.order_items) {
         if (item.variation_id) {
           // Deduct from variation - get current stock and update
@@ -219,7 +223,10 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
             .eq('id', item.variation_id)
             .single();
 
-          if (varError) throw varError;
+          if (varError) {
+            if (varError.code === 'PGRST116') continue; // Variation deleted — nothing to deduct
+            throw varError;
+          }
 
           if (variation) {
             const newStock = Math.max(0, variation.stock_quantity - item.quantity);
@@ -238,7 +245,10 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
             .eq('id', item.product_id)
             .single();
 
-          if (prodError) throw prodError;
+          if (prodError) {
+            if (prodError.code === 'PGRST116') continue; // Product deleted — nothing to deduct
+            throw prodError;
+          }
 
           if (product) {
             const newStock = Math.max(0, product.stock_quantity - item.quantity);
