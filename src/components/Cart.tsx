@@ -1,6 +1,7 @@
 import React from 'react';
 import { Trash2, ShoppingBag, ArrowLeft, CreditCard, Plus, Minus, Sparkles, Activity } from 'lucide-react';
 import type { CartItem } from '../types';
+import { ikImage } from '../utils/imagekit';
 
 interface CartProps {
   cartItems: CartItem[];
@@ -96,9 +97,10 @@ const Cart: React.FC<CartProps> = ({
                   <div className="w-20 h-20 md:w-24 md:h-24 bg-secondary-50 rounded flex-shrink-0 border border-gray-100 overflow-hidden">
                     {item.product.image_url ? (
                       <img
-                        src={item.product.image_url}
+                        src={ikImage(item.product.image_url, { w: 200 })}
                         alt={item.product.name}
                         className="w-full h-full object-cover"
+                        loading="lazy"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-charcoal-200 font-bold text-2xl bg-brand-100">

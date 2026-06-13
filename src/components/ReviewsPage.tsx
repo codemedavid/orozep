@@ -3,6 +3,7 @@ import React from 'react';
 import { ArrowLeft, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useReviews } from '../hooks/useReviews';
+import { ikImage } from '../utils/imagekit';
 
 const ReviewsPage: React.FC = () => {
   const { reviews, loading } = useReviews();
@@ -64,7 +65,7 @@ const ReviewsPage: React.FC = () => {
                 {/* Image */}
                 {review.image_url && (
                   <img
-                    src={review.image_url}
+                    src={ikImage(review.image_url, { w: 600 })}
                     alt={review.title || 'Review'}
                     className="w-full object-cover min-h-[220px]"
                     loading="lazy"

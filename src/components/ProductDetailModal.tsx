@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { X, Package, ShoppingCart, Plus, Minus, FlaskConical, Thermometer, Weight, Hash } from 'lucide-react';
 import type { Product, ProductVariation } from '../types';
 import { useReviews } from '../hooks/useReviews';
+import { ikImage } from '../utils/imagekit';
 
 interface ProductDetailModalProps {
   product: Product;
@@ -137,7 +138,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, onClos
             >
               {product.image_url && !imageError ? (
                 <img
-                  src={product.image_url}
+                  src={ikImage(product.image_url, { w: 800 })}
                   alt={product.name}
                   className="w-full h-full object-cover"
                   onError={() => setImageError(true)}
@@ -591,10 +592,11 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, onClos
                       >
                         {review.image_url && (
                           <img
-                            src={review.image_url}
+                            src={ikImage(review.image_url, { w: 600 })}
                             alt={review.title || 'Review'}
                             className="w-full object-cover"
                             style={{ maxHeight: '320px', minHeight: '180px' }}
+                            loading="lazy"
                           />
                         )}
                         {(review.title || review.content) && (

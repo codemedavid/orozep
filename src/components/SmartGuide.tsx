@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { FileText, ArrowLeft, BookOpen, Calendar, User, ChevronRight } from 'lucide-react';
+import { ikImage } from '../utils/imagekit';
 
 interface Article {
     id: string;
@@ -94,9 +95,10 @@ export default function SmartGuide() {
                                 {article.cover_image ? (
                                     <div className="relative w-full h-48 bg-gray-200 overflow-hidden">
                                         <img
-                                            src={article.cover_image}
+                                            src={ikImage(article.cover_image, { w: 600 })}
                                             alt={article.title}
                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                            loading="lazy"
                                         />
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                                     </div>

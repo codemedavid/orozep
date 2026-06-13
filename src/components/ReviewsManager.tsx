@@ -4,6 +4,7 @@ import { Plus, Edit2, Trash2, Save, X, ArrowLeft, MessageSquare } from 'lucide-r
 import { useReviews } from '../hooks/useReviews';
 import { useMenu } from '../hooks/useMenu';
 import ImageUpload from './ImageUpload';
+import { ikImage } from '../utils/imagekit';
 import type { ReviewWithProducts } from '../types/review';
 
 interface ReviewsManagerProps {
@@ -264,9 +265,10 @@ const ReviewsManager: React.FC<ReviewsManagerProps> = ({ onBack }) => {
                   {/* Thumbnail */}
                   {review.image_url && (
                     <img
-                      src={review.image_url}
+                      src={ikImage(review.image_url, { w: 200 })}
                       alt={review.title || 'Review'}
                       className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
+                      loading="lazy"
                     />
                   )}
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ShoppingCart, Package } from 'lucide-react';
 import type { Product, ProductVariation } from '../types';
+import { ikImage } from '../utils/imagekit';
 
 interface MenuItemCardProps {
   product: Product;
@@ -55,9 +56,10 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
       >
         {product.image_url && !imageError ? (
           <img
-            src={product.image_url}
+            src={ikImage(product.image_url, { w: 400 })}
             alt={product.name}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
             onError={() => setImageError(true)}
           />
         ) : (

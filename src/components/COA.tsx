@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Shield, Award, CheckCircle, X, ExternalLink, Download, Sparkles, ArrowLeft, Copy, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useCOAPageSetting } from '../hooks/useCOAPageSetting';
+import { ikImage } from '../utils/imagekit';
 
 interface COAReport {
   id: string;
@@ -148,9 +149,10 @@ const COA: React.FC = () => {
                   onClick={() => setSelectedImage(report.image_url)}
                 >
                   <img
-                    src={report.image_url}
+                    src={ikImage(report.image_url, { w: 700 })}
                     alt={`${report.product_name} Certificate of Analysis`}
                     className="w-full h-48 sm:h-56 md:h-64 lg:h-80 object-cover object-top"
+                    loading="lazy"
                     onError={(e) => {
                       // Fallback if image doesn't exist
                       (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23f0f9ff" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" fill="%230ea5e9" font-size="20" font-family="Arial"%3ECOA Image Coming Soon%3C/text%3E%3C/svg%3E';

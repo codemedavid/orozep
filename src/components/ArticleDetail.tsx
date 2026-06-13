@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { ArrowLeft, Calendar, User } from 'lucide-react';
+import { ikImage } from '../utils/imagekit';
 
 interface Article {
     id: string;
@@ -90,7 +91,7 @@ export default function ArticleDetail() {
             {article.cover_image && (
                 <div className="relative w-full h-64 md:h-96 bg-gray-200">
                     <img
-                        src={article.cover_image}
+                        src={ikImage(article.cover_image, { w: 800 })}
                         alt={article.title}
                         className="w-full h-full object-cover"
                     />
