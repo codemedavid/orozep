@@ -1,92 +1,46 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, Package, CheckCircle, XCircle, Clock, Truck, AlertCircle, Search, RefreshCw, Eye, MessageCircle, Image as ImageIcon, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Package, CheckCircle, XCircle, Clock, Truck, AlertCircle, Search, RefreshCw, Eye, MessageCircle, Image as ImageIcon, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useMenu } from '../hooks/useMenu';
 import { useCouriers } from '../hooks/useCouriers';
-
-interface OrderItem {
-  product_id: string;
-  product_name: string;
-  variation_id: string | null;
-  variation_name: string | null;
-  quantity: number;
-  price: number;
-  total: number;
-  purity_percentage?: number;
-}
-
-interface Order {
-  id: string;
-  customer_name: string;
-  customer_email: string;
-  customer_phone: string;
-  shipping_address: string;
-  shipping_barangay: string | null;
-  shipping_city: string;
-  shipping_state: string;
-  shipping_zip_code: string;
-  shipping_country: string;
-  shipping_location: string | null;
-  shipping_fee: number | null;
-  order_items: OrderItem[];
-  total_price: number;
-  payment_method_id: string | null;
-  payment_method_name: string | null;
-  payment_proof_url: string | null;
-  contact_method: string | null;
-  order_status: string;
-  payment_status: string;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-  tracking_number: string | null;
-  shipping_provider: string | null;
-  shipping_note: string | null;
-  promo_code: string | null;
-  discount_applied: number | null;
-  order_number: string | null;
-}
+import { useOrders, ORDERS_PAGE_SIZE, type Order } from '../hooks/useOrders';
 
 interface OrdersManagerProps {
   onBack: () => void;
 }
 
 const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const {
+    orders,
+    loading,
+    page,
+    totalPages,
+    totalCount,
+    statusCounts,
+    statusFilter,
+    searchQuery,
+    error,
+    setPage,
+    setStatusFilter,
+    setSearchQuery,
+    refresh,
+  } = useOrders();
+
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
   const { refreshProducts } = useMenu();
 
+  // Clear the selection whenever the visible page of orders changes so we
+  // never hold ids that are no longer on screen.
   useEffect(() => {
-    loadOrders();
-  }, []);
-
-  const loadOrders = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setOrders(data || []);
-    } catch (error) {
-      console.error('Error loading orders:', error);
-      alert('Failed to load orders. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    setSelectedOrderIds(new Set());
+  }, [page, statusFilter, searchQuery]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await loadOrders();
+    await refresh();
     setTimeout(() => setIsRefreshing(false), 500);
   };
 
@@ -103,10 +57,10 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
   };
 
   const toggleSelectAll = () => {
-    if (selectedOrderIds.size === filteredOrders.length) {
+    if (selectedOrderIds.size === orders.length) {
       setSelectedOrderIds(new Set());
     } else {
-      setSelectedOrderIds(new Set(filteredOrders.map(o => o.id)));
+      setSelectedOrderIds(new Set(orders.map(o => o.id)));
     }
   };
 
@@ -124,7 +78,7 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
       if (error) throw error;
 
       setSelectedOrderIds(new Set());
-      await loadOrders();
+      await refresh();
       alert(`${selectedOrderIds.size} order(s) deleted successfully.`);
     } catch (error) {
       console.error('Error deleting orders:', error);
@@ -135,8 +89,8 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
   };
 
   const handleDeleteAllOrders = async () => {
-    if (orders.length === 0) return;
-    if (!confirm(`Are you sure you want to permanently delete ALL ${orders.length} orders? This action cannot be undone.`)) return;
+    if (totalCount === 0) return;
+    if (!confirm(`Are you sure you want to permanently delete ALL ${totalCount} orders? This action cannot be undone.`)) return;
     if (!confirm(`FINAL WARNING: This will delete every order in the system. Type confirm to proceed.`)) return;
 
     try {
@@ -149,7 +103,7 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
       if (error) throw error;
 
       setSelectedOrderIds(new Set());
-      await loadOrders();
+      await refresh();
       alert('All orders have been deleted successfully.');
     } catch (error) {
       console.error('Error deleting all orders:', error);
@@ -275,7 +229,7 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
       if (updateError) throw updateError;
 
       // Refresh orders and products
-      await loadOrders();
+      await refresh();
       await refreshProducts();
 
       // Trigger custom event to refresh inventory sales data
@@ -304,7 +258,7 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
         .eq('id', orderId);
 
       if (error) throw error;
-      await loadOrders();
+      await refresh();
       if (selectedOrder?.id === orderId) {
         setSelectedOrder({ ...selectedOrder, order_status: newStatus });
       }
@@ -331,13 +285,8 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
 
       if (error) throw error;
 
-      // Update local state
-      const updatedOrders = orders.map(o =>
-        o.id === orderId
-          ? { ...o, tracking_number: trackingNumber || null, shipping_provider: shippingProvider || 'jnt', shipping_note: shippingNote || null }
-          : o
-      );
-      setOrders(updatedOrders);
+      // Re-fetch the current page so the list reflects the saved tracking info.
+      await refresh();
 
       if (selectedOrder?.id === orderId) {
         setSelectedOrder({
@@ -356,41 +305,6 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
       setIsProcessing(false);
     }
   };
-
-  const filteredOrders = useMemo(() => {
-    let filtered = orders;
-
-    // Filter by status
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(o => o.order_status === statusFilter);
-    }
-
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(o =>
-        o.customer_name.toLowerCase().includes(query) ||
-        o.customer_email.toLowerCase().includes(query) ||
-        o.customer_phone.includes(query) ||
-        o.id.toLowerCase().includes(query) ||
-        (o.order_number && o.order_number.toLowerCase().includes(query))
-      );
-    }
-
-    return filtered;
-  }, [orders, statusFilter, searchQuery]);
-
-  const statusCounts = useMemo(() => {
-    return {
-      all: orders.length,
-      new: orders.filter(o => o.order_status === 'new').length,
-      confirmed: orders.filter(o => o.order_status === 'confirmed').length,
-      processing: orders.filter(o => o.order_status === 'processing').length,
-      shipped: orders.filter(o => o.order_status === 'shipped').length,
-      delivered: orders.filter(o => o.order_status === 'delivered').length,
-      cancelled: orders.filter(o => o.order_status === 'cancelled').length,
-    };
-  }, [orders]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -416,7 +330,9 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
     }
   };
 
-  if (loading) {
+  // Full-page spinner only on the initial load; background refreshes keep the
+  // current list (and any open order) on screen instead of blanking it out.
+  if (loading && orders.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-white flex items-center justify-center">
         <div className="text-center">
@@ -547,18 +463,32 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
           </div>
         </div>
 
+        {/* Load error */}
+        {error && (
+          <div
+            role="alert"
+            className="bg-red-50 border border-red-300 text-red-700 rounded-lg md:rounded-xl p-3 md:p-4 mb-4 md:mb-6 flex items-start gap-2 text-sm"
+          >
+            <AlertCircle className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold">Failed to load orders.</p>
+              <p className="text-xs md:text-sm text-red-600">{error} — tap Refresh to try again.</p>
+            </div>
+          </div>
+        )}
+
         {/* Bulk Actions Bar */}
-        {filteredOrders.length > 0 && (
+        {orders.length > 0 && (
           <div className="bg-white rounded-lg md:rounded-xl shadow-md p-3 md:p-4 mb-4 md:mb-6 border border-navy-700/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
                 <input
                   type="checkbox"
-                  checked={filteredOrders.length > 0 && selectedOrderIds.size === filteredOrders.length}
+                  checked={orders.length > 0 && selectedOrderIds.size === orders.length}
                   onChange={toggleSelectAll}
                   className="w-4 h-4 rounded border-gray-300 text-navy-900 focus:ring-navy-900 cursor-pointer"
                 />
-                <span className="font-medium">Select All ({filteredOrders.length})</span>
+                <span className="font-medium">Select Page ({orders.length})</span>
               </label>
               {selectedOrderIds.size > 0 && (
                 <span className="text-xs text-gray-500">{selectedOrderIds.size} selected</span>
@@ -575,7 +505,7 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
               </button>
               <button
                 onClick={handleDeleteAllOrders}
-                disabled={orders.length === 0 || isProcessing}
+                disabled={totalCount === 0 || isProcessing}
                 className="px-3 md:px-4 py-1.5 md:py-2 bg-red-700 hover:bg-red-800 text-white rounded-lg transition-colors font-medium text-xs md:text-sm flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
               >
                 <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
@@ -587,14 +517,14 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
 
         {/* Orders List */}
         <div className="space-y-3 md:space-y-4">
-          {filteredOrders.length === 0 ? (
+          {orders.length === 0 ? (
             <div className="bg-white rounded-lg md:rounded-xl shadow-lg p-8 md:p-12 text-center border border-navy-700/30">
               <Package className="w-12 h-12 md:w-16 md:h-16 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-600 font-medium text-base md:text-lg">No orders found</p>
               <p className="text-gray-500 text-sm mt-2">Try adjusting your filters</p>
             </div>
           ) : (
-            filteredOrders.map((order) => (
+            orders.map((order) => (
               <OrderCard
                 key={order.id}
                 order={order}
@@ -607,6 +537,41 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
             ))
           )}
         </div>
+
+        {/* Pagination */}
+        {totalCount > 0 && (
+          <div className="mt-4 md:mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white rounded-lg md:rounded-xl shadow-md p-3 md:p-4 border border-navy-700/30">
+            <p className="text-xs md:text-sm text-gray-600">
+              Showing{' '}
+              <span className="font-semibold text-gray-900">{(page - 1) * ORDERS_PAGE_SIZE + 1}</span>
+              {'–'}
+              <span className="font-semibold text-gray-900">{Math.min(page * ORDERS_PAGE_SIZE, totalCount)}</span>
+              {' of '}
+              <span className="font-semibold text-gray-900">{totalCount.toLocaleString()}</span> orders
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(Math.max(1, page - 1))}
+                disabled={page <= 1}
+                className="px-3 py-1.5 md:py-2 bg-navy-900 hover:bg-navy-800 text-white rounded-lg font-medium text-xs md:text-sm flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <span className="hidden sm:inline">Prev</span>
+              </button>
+              <span className="text-xs md:text-sm text-gray-700 font-medium px-1">
+                Page {page} of {totalPages}
+              </span>
+              <button
+                onClick={() => setPage(Math.min(totalPages, page + 1))}
+                disabled={page >= totalPages}
+                className="px-3 py-1.5 md:py-2 bg-navy-900 hover:bg-navy-800 text-white rounded-lg font-medium text-xs md:text-sm flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <span className="hidden sm:inline">Next</span>
+                <ChevronRight className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

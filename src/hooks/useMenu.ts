@@ -2,15 +2,67 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Product, ProductVariation } from '../types';
 
-export function useMenu() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+// Product columns fetched for the storefront.
+const PRODUCT_COLUMNS =
+  'id, name, description, category, base_price, discount_price, discount_start_date, discount_end_date, discount_active, purity_percentage, molecular_weight, cas_number, sequence, storage_conditions, inclusions, stock_quantity, available, featured, image_url, safety_sheet_url, created_at, updated_at';
+
+// Variations are embedded via a PostgREST join (`product_variations(*)`) so the
+// whole catalog loads in ONE request instead of 1 + N (one query per product).
+// This is the main Supabase egress saver — see useMenu.test.ts.
+const PRODUCT_SELECT = `${PRODUCT_COLUMNS}, product_variations(*)`;
+
+// Short-lived per-tab cache so quick re-mounts (route changes, remounts) reuse
+// the last fetch instead of re-hitting Supabase. It is process-local: a mutation
+// clears the cache only in the tab that made it, so other clients keep seeing
+// the previous data until the TTL lapses. The storefront tolerates that; the
+// admin panel bypasses the cache entirely (see below) so operators never edit
+// stale data.
+const MENU_CACHE_TTL_MS = 60_000;
+let menuCache: { data: Product[]; at: number } | null = null;
+
+function isMenuCacheFresh(): boolean {
+  return menuCache !== null && Date.now() - menuCache.at < MENU_CACHE_TTL_MS;
+}
+
+function invalidateMenuCache(): void {
+  menuCache = null;
+}
+
+interface UseMenuOptions {
+  /**
+   * Open a realtime subscription + refetch on window focus/visibility.
+   * Off by default: the customer-facing storefront fetches once and does not
+   * hold a websocket open per visitor. Enable it in the admin panel so product
+   * managers still see live updates while editing.
+   */
+  realtime?: boolean;
+}
+
+export function useMenu(options: UseMenuOptions = {}) {
+  const { realtime = false } = options;
+  // Storefront may hydrate from the shared cache; admin starts clean and fetches
+  // fresh so operators never see stale data.
+  const [products, setProducts] = useState<Product[]>(() =>
+    !realtime && isMenuCacheFresh() && menuCache ? menuCache.data : []
+  );
+  const [loading, setLoading] = useState(realtime || !isMenuCacheFresh());
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchProducts();
+    // Storefront reuses a fresh cache; admin always fetches fresh.
+    if (!realtime && isMenuCacheFresh() && menuCache) {
+      setProducts(menuCache.data);
+      setLoading(false);
+    } else {
+      fetchProducts();
+    }
 
-    // Set up real-time subscription for product changes with unique channel name
+    // Storefront: no realtime subscription.
+    if (!realtime) {
+      return;
+    }
+
+    // Admin only: keep the catalog live while managing products.
     const channelId = `products-realtime-${Date.now()}`;
     const productsChannel = supabase
       .channel(channelId)
@@ -38,143 +90,59 @@ export function useMenu() {
           fetchProducts(); // Refetch all products when variations change
         }
       )
-      .subscribe((status) => {
-        console.log('📡 Real-time subscription status:', status);
-      });
+      .subscribe();
 
-    // Refetch data when window regains focus (user switches back from admin)
-    // But only if we're not on the admin page to avoid interfering with forms
-    let focusRefreshTimeout: ReturnType<typeof setTimeout> | null = null;
-    const handleFocus = () => {
-      // Check if we're on admin page - if so, don't refresh
-      const isAdminPage = window.location.pathname === '/admin';
-      if (isAdminPage) {
-        console.log('👁️ Window focused on admin page - skipping refresh to avoid form interference');
-        return;
-      }
-
-      // Debounce focus refresh to avoid too frequent refreshes
-      if (focusRefreshTimeout) {
-        clearTimeout(focusRefreshTimeout);
-      }
-
-      focusRefreshTimeout = setTimeout(() => {
-        console.log('👁️ Window focused - refreshing products...');
-        fetchProducts();
-        focusRefreshTimeout = null;
-      }, 1000); // Wait 1 second before refreshing
-    };
-
-    // Also add visibility change handler for better cross-tab updates
-    // But skip if on admin page
-    const handleVisibilityChange = () => {
-      if (document.hidden) return;
-
-      const isAdminPage = window.location.pathname === '/admin';
-      if (isAdminPage) {
-        console.log('👁️ Tab became visible on admin page - skipping refresh');
-        return;
-      }
-
-      // Debounce visibility refresh
-      if (focusRefreshTimeout) {
-        clearTimeout(focusRefreshTimeout);
-      }
-
-      focusRefreshTimeout = setTimeout(() => {
-        console.log('👁️ Tab became visible - refreshing products...');
-        fetchProducts();
-        focusRefreshTimeout = null;
-      }, 1000);
-    };
-
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    // Cleanup subscriptions on unmount
     return () => {
       supabase.removeChannel(productsChannel);
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (focusRefreshTimeout) {
-        clearTimeout(focusRefreshTimeout);
-      }
     };
-  }, []);
+  }, [realtime]);
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      console.log('🔄 Fetching products from database...');
 
-      // Force fresh data by clearing any potential cache
-      const timestamp = Date.now();
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, description, category, base_price, discount_price, discount_start_date, discount_end_date, discount_active, purity_percentage, molecular_weight, cas_number, sequence, storage_conditions, inclusions, stock_quantity, available, featured, image_url, safety_sheet_url, created_at, updated_at')
+      // Single query: products with their variations embedded via a PostgREST
+      // join. Replaces the previous 1 + N pattern (one extra query per product)
+      // to minimize Supabase egress. Cast to `any` because the generated
+      // Database type does not declare the products→product_variations relation.
+      const { data, error } = await (supabase.from('products') as any)
+        .select(PRODUCT_SELECT)
         .eq('available', true)
         .order('featured', { ascending: false })
-        .order('name', { ascending: true });
+        .order('name', { ascending: true })
+        .order('quantity_mg', { referencedTable: 'product_variations', ascending: true });
 
-      if (error) throw error;
-
-      console.log(`📦 Found ${data?.length || 0} products`);
-
-      // Log products with discounts
-      const productsWithDiscounts = (data || []).filter(p => p.discount_active && p.discount_price);
-      if (productsWithDiscounts.length > 0) {
-        console.log(`💰 Products with ACTIVE discounts: ${productsWithDiscounts.length}`,
-          productsWithDiscounts.map(p => ({
-            name: p.name,
-            base_price: p.base_price,
-            discount_price: p.discount_price,
-            discount_active: p.discount_active,
-            savings: p.base_price - (p.discount_price || 0)
-          }))
-        );
-      } else {
-        console.log('⚠️ No products found with discount_active=true AND discount_price set');
+      let rows = data;
+      if (error) {
+        // Resilience: if the embedded join fails (missing/ambiguous FK, RLS on
+        // product_variations, a stale schema cache, etc.), degrade to a
+        // products-only fetch so the catalog still renders instead of going
+        // blank. Variations come back empty until the relation is reachable.
+        console.error('Embedded product query failed; falling back to products-only:', error);
+        const fallback = await supabase
+          .from('products')
+          .select(PRODUCT_COLUMNS)
+          .eq('available', true)
+          .order('featured', { ascending: false })
+          .order('name', { ascending: true });
+        if (fallback.error) throw fallback.error;
+        rows = fallback.data;
       }
 
-      // Log products with images for debugging
-      const productsWithImages = (data || []).filter(p => p.image_url);
-      if (productsWithImages.length > 0) {
-        console.log(`🖼️ Products with images: ${productsWithImages.length}`,
-          productsWithImages.map(p => ({ name: p.name, image_url: p.image_url?.substring(0, 50) + '...' }))
-        );
-      }
+      const mapped: Product[] = ((rows as Record<string, unknown>[]) || []).map((row) => {
+        const { product_variations, ...product } = row;
+        return {
+          ...(product as Omit<Product, 'variations'>),
+          variations: (product_variations ?? []) as ProductVariation[],
+        };
+      });
 
-      // Fetch variations for each product
-      const productsWithVariations = await Promise.all(
-        (data || []).map(async (product) => {
-          const { data: variations } = await supabase
-            .from('product_variations')
-            .select('*')
-            .eq('product_id', product.id)
-            .order('quantity_mg', { ascending: true });
-
-          if (variations && variations.length > 0) {
-            console.log(`  └─ ${product.name}: ${variations.length} variations, prices:`, variations.map(v => `${v.name}:₱${v.price}`));
-          }
-
-          // Log if product has image_url
-          if (product.image_url) {
-            console.log(`  🖼️ ${product.name} has image: ${product.image_url.substring(0, 60)}...`);
-          }
-
-          return {
-            ...product,
-            variations: variations || []
-          };
-        })
-      );
-
-      console.log('✅ Products updated successfully at', new Date().toLocaleTimeString());
-      setProducts(productsWithVariations);
+      menuCache = { data: mapped, at: Date.now() };
+      setProducts(mapped);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch products');
-      console.error('❌ Error fetching products:', err);
+      console.error('Error fetching products:', err);
     } finally {
       setLoading(false);
     }
@@ -203,7 +171,8 @@ export function useMenu() {
       console.log('✅ Product added to database:', { id: data?.id, image_url: data?.image_url });
 
       if (data) {
-        setProducts([...products, data]);
+        invalidateMenuCache();
+        setProducts(prev => [...prev, { ...data, variations: [] }]);
       }
       return { success: true, data };
     } catch (err) {
@@ -288,7 +257,8 @@ export function useMenu() {
 
       if (data) {
         // Update local state immediately
-        setProducts(products.map(p => p.id === id ? { ...data, variations: p.variations } : p));
+        invalidateMenuCache();
+        setProducts(prev => prev.map(p => p.id === id ? { ...data, variations: p.variations } : p));
       }
       return { success: true, data };
     } catch (err) {
@@ -307,7 +277,8 @@ export function useMenu() {
 
       if (error) throw error;
 
-      setProducts(products.filter(p => p.id !== id));
+      invalidateMenuCache();
+      setProducts(prev => prev.filter(p => p.id !== id));
       return { success: true };
     } catch (err) {
       console.error('Error deleting product:', err);

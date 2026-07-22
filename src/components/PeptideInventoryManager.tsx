@@ -10,7 +10,7 @@ interface PeptideInventoryManagerProps {
 }
 
 const PeptideInventoryManager: React.FC<PeptideInventoryManagerProps> = ({ onBack }) => {
-  const { products, loading, refreshProducts, deleteProduct, deleteVariation } = useMenu();
+  const { products, loading, refreshProducts, deleteProduct, deleteVariation } = useMenu({ realtime: true });
   const { categories } = useCategories();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');

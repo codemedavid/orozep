@@ -10,7 +10,7 @@ interface VariationManagerProps {
 }
 
 const VariationManager: React.FC<VariationManagerProps> = ({ product, onClose, onUpdate }) => {
-  const { addVariation, updateVariation, deleteVariation } = useMenu();
+  const { addVariation, updateVariation, deleteVariation } = useMenu({ realtime: true });
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
