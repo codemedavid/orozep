@@ -26,13 +26,10 @@ export const useCouriers = () => {
             if (error) throw error;
             setCouriers(data || []);
         } catch (error) {
+            // No hardcoded fallback list: it resurrected couriers the admin had
+            // deleted (LBC), which then got saved onto real orders.
             console.error('Error fetching couriers:', error);
-            // Return default couriers if table doesn't exist
-            setCouriers([
-                { id: '00000000-0000-0000-0000-000000000001', name: 'LBC Express', code: 'lbc', tracking_url_template: 'https://www.lbcexpress.com/track/?tracking_no={tracking}', is_active: true, sort_order: 1, created_at: new Date().toISOString() },
-                { id: '00000000-0000-0000-0000-000000000002', name: 'Lalamove', code: 'lalamove', tracking_url_template: null, is_active: true, sort_order: 2, created_at: new Date().toISOString() },
-                { id: '00000000-0000-0000-0000-000000000003', name: 'Maxim', code: 'maxim', tracking_url_template: null, is_active: true, sort_order: 3, created_at: new Date().toISOString() },
-            ]);
+            setCouriers([]);
         } finally {
             setLoading(false);
         }

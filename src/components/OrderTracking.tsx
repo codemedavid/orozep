@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Search, Package, Truck, CheckCircle, Clock, AlertCircle, ArrowRight, ExternalLink, ArrowLeft } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useCouriers } from '../hooks/useCouriers';
+import { getCourierDisplay } from '../lib/couriers';
 
 interface TrackingOrder {
     id: string;
@@ -22,6 +24,7 @@ interface TrackingOrder {
 }
 
 const OrderTracking: React.FC = () => {
+    const { couriers } = useCouriers();
     const [orderId, setOrderId] = useState('');
     const [order, setOrder] = useState<TrackingOrder | null>(null);
     const [loading, setLoading] = useState(false);
@@ -76,6 +79,12 @@ const OrderTracking: React.FC = () => {
     };
 
     const currentStep = order ? getStatusStep(order.order_status) : 0;
+    // The couriers table is the only source of truth for who is carrying the order.
+    const courier = getCourierDisplay(
+        order?.shipping_provider ?? null,
+        couriers,
+        order?.tracking_number ?? null,
+    );
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-white via-gold-50/10 to-white py-12 px-4 sm:px-6 lg:px-8">
@@ -214,59 +223,27 @@ const OrderTracking: React.FC = () => {
                                             <div className="space-y-4">
                                                 <div>
                                                     <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">
-                                                        Tracking {order.shipping_provider === 'lbc' ? 'Number' : 'ID'} ({
-                                                            order.shipping_provider === 'lbc' ? 'LBC Express' :
-                                                                order.shipping_provider === 'lalamove' ? 'Lalamove' :
-                                                                    order.shipping_provider === 'maxim' ? 'Maxim' :
-                                                                        order.shipping_provider === 'spx' ? 'SPX Express' : 'J&T Express'
-                                                        })
+                                                        {courier.isKnown ? `Tracking Number (${courier.name})` : 'Tracking Number'}
                                                     </p>
                                                     <p className="text-xl font-mono font-bold text-navy-900 tracking-wide">{order.tracking_number}</p>
                                                 </div>
 
-                                                {order.shipping_provider === 'lbc' ? (
+                                                {courier.trackingUrl ? (
                                                     <a
-                                                        href={`https://www.lbcexpress.com/track/?tracking_no=${order.tracking_number}`}
+                                                        href={courier.trackingUrl}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="block w-full py-3 text-white text-center rounded-lg font-bold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700"
+                                                        className="block w-full py-3 text-white text-center rounded-lg font-bold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2 bg-navy-900 hover:bg-navy-800"
                                                     >
-                                                        Track on LBC Express
-                                                        <ExternalLink className="w-4 h-4" />
-                                                    </a>
-                                                ) : order.shipping_provider === 'lalamove' ? (
-                                                    <a
-                                                        href="https://web.lalamove.com/"
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="block w-full py-3 text-white text-center rounded-lg font-bold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600"
-                                                    >
-                                                        Open Lalamove App/Web
-                                                        <ExternalLink className="w-4 h-4" />
-                                                    </a>
-                                                ) : order.shipping_provider === 'maxim' ? (
-                                                    <a
-                                                        href="https://taximaxim.com/"
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="block w-full py-3 text-white text-center rounded-lg font-bold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-black"
-                                                    >
-                                                        Open Maxim App/Web
+                                                        Track on {courier.name}
                                                         <ExternalLink className="w-4 h-4" />
                                                     </a>
                                                 ) : (
-                                                    <a
-                                                        href={order.shipping_provider === 'spx'
-                                                            ? `https://spx.ph/track`
-                                                            : `https://www.jtexpress.ph/trajectoryQuery?bills=${order.tracking_number}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className={`block w-full py-3 text-white text-center rounded-lg font-bold transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2 ${order.shipping_provider === 'spx' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-red-600 hover:bg-red-700'
-                                                            }`}
-                                                    >
-                                                        Track on {order.shipping_provider === 'spx' ? 'SPX Express' : 'J&T Express'}
-                                                        <ExternalLink className="w-4 h-4" />
-                                                    </a>
+                                                    <p className="text-sm text-gray-600">
+                                                        {courier.isKnown
+                                                            ? `Use this number on the ${courier.name} app or website for the latest status.`
+                                                            : 'Message us with this number and we will check the latest status for you.'}
+                                                    </p>
                                                 )}
                                             </div>
                                         ) : (
