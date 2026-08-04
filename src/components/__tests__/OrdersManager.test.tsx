@@ -1,8 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
-// Hoisted handle so the useOrders mock factory can reference it.
-const { useOrdersMock } = vi.hoisted(() => ({ useOrdersMock: vi.fn() }));
+// Hoisted handles so the mock factories can reference them.
+const { useOrdersMock, useCouriersMock } = vi.hoisted(() => ({
+  useOrdersMock: vi.fn(),
+  useCouriersMock: vi.fn(),
+}));
 
 vi.mock('../../hooks/useOrders', () => ({
   useOrders: () => useOrdersMock(),
@@ -12,7 +16,7 @@ vi.mock('../../hooks/useMenu', () => ({
   useMenu: () => ({ refreshProducts: vi.fn() }),
 }));
 vi.mock('../../hooks/useCouriers', () => ({
-  useCouriers: () => ({ couriers: [] }),
+  useCouriers: () => useCouriersMock(),
 }));
 vi.mock('../../lib/supabase', () => ({ supabase: { from: vi.fn() } }));
 
@@ -71,8 +75,31 @@ function hookValue(overrides: Record<string, unknown> = {}) {
   };
 }
 
+// The shop's live courier list: the admin deleted LBC, so only J&T remains.
+const JNT_COURIER = {
+  id: 'courier-jnt',
+  name: 'J&T Express',
+  code: 'jnt',
+  tracking_url_template: 'https://www.jtexpress.ph/trajectoryQuery?bills={tracking}',
+  is_active: true,
+  sort_order: 0,
+  created_at: '2026-01-01T00:00:00Z',
+};
+
+async function openOrderDetails(order = SAMPLE_ORDER) {
+  const user = userEvent.setup();
+  useOrdersMock.mockReturnValue(hookValue({ orders: [order], totalCount: 1, totalPages: 1 }));
+
+  render(<OrdersManager onBack={() => {}} />);
+  await user.click(screen.getByRole('button', { name: /view details/i }));
+
+  return user;
+}
+
 beforeEach(() => {
   useOrdersMock.mockReset();
+  useCouriersMock.mockReset();
+  useCouriersMock.mockReturnValue({ couriers: [JNT_COURIER] });
 });
 
 describe('OrdersManager', () => {
@@ -105,5 +132,39 @@ describe('OrdersManager', () => {
     render(<OrdersManager onBack={() => {}} />);
 
     expect(screen.getByText(/loading orders/i)).toBeInTheDocument();
+  });
+});
+
+describe('OrdersManager courier selection', () => {
+  it('defaults an order with no courier to a courier that actually exists', async () => {
+    // Regression: the form defaulted to 'lbc'. With LBC deleted there is no
+    // matching <option>, so the select displayed "J&T Express" while the form
+    // state stayed 'lbc' — saving wrote 'lbc' to the order.
+    await openOrderDetails();
+
+    expect(screen.getByLabelText(/courier/i)).toHaveValue('jnt');
+  });
+
+  it('does not offer a courier the admin deleted', async () => {
+    await openOrderDetails();
+
+    expect(screen.queryByRole('option', { name: /LBC/i })).not.toBeInTheDocument();
+  });
+
+  it('replaces a stored courier that no longer exists so the form matches what is saved', async () => {
+    await openOrderDetails({ ...SAMPLE_ORDER, shipping_provider: 'lbc', tracking_number: '600017794686' });
+
+    // The displayed selection and the value that would be submitted must agree.
+    expect(screen.getByLabelText(/courier/i)).toHaveValue('jnt');
+  });
+
+  it('forces an explicit choice when no courier is available to default to', async () => {
+    useCouriersMock.mockReturnValue({ couriers: [] });
+
+    await openOrderDetails();
+
+    const select = screen.getByLabelText(/courier/i);
+    expect(select).toHaveValue('');
+    expect(screen.getByRole('option', { name: /select a courier/i })).toBeInTheDocument();
   });
 });
