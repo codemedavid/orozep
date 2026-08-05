@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useMenu } from '../hooks/useMenu';
 import { useCouriers } from '../hooks/useCouriers';
 import { useOrders, ORDERS_PAGE_SIZE, type Order } from '../hooks/useOrders';
+import { resolveCourierCode } from '../lib/couriers';
 
 interface OrdersManagerProps {
   onBack: () => void;
@@ -271,13 +272,20 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
   };
 
   const handleSaveTracking = async (orderId: string, trackingNumber: string, shippingProvider: string, shippingNote: string) => {
+    // Never guess a courier on the customer's behalf — a wrong one sends them to
+    // the wrong tracking site.
+    if (!shippingProvider) {
+      alert('Please select a courier before saving tracking information.');
+      return;
+    }
+
     try {
       setIsProcessing(true);
       const { error } = await supabase
         .from('orders')
         .update({
           tracking_number: trackingNumber || null,
-          shipping_provider: shippingProvider || 'jnt',
+          shipping_provider: shippingProvider,
           shipping_note: shippingNote || null,
           updated_at: new Date().toISOString()
         })
@@ -292,7 +300,7 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
         setSelectedOrder({
           ...selectedOrder,
           tracking_number: trackingNumber || null,
-          shipping_provider: shippingProvider || 'jnt',
+          shipping_provider: shippingProvider,
           shipping_note: shippingNote || null
         });
       }
@@ -688,16 +696,23 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
 }) => {
   const { couriers } = useCouriers();
   const [trackingNumber, setTrackingNumber] = useState(order.tracking_number || '');
-  const [shippingProvider, setShippingProvider] = useState(order.shipping_provider || 'lbc');
   const [shippingNote, setShippingNote] = useState(order.shipping_note || '');
+  // null means "admin has not picked a courier for this order yet", so the
+  // selection stays derived from the order and the live courier list.
+  const [pickedProvider, setPickedProvider] = useState<string | null>(null);
 
   // Update local state when order changes
   useEffect(() => {
     setTrackingNumber(order.tracking_number || '');
-    setShippingProvider(order.shipping_provider || 'lbc');
     setShippingNote(order.shipping_note || '');
+    setPickedProvider(null);
   }, [order]);
 
+  // Derived, never stored: a deleted courier has no <option>, and a select whose
+  // value has no matching option silently submits something the admin never saw.
+  // Resolving here keeps the displayed courier and the saved courier equal.
+  const activeCouriers = couriers.filter(c => c.is_active);
+  const shippingProvider = pickedProvider ?? resolveCourierCode(order.shipping_provider, couriers);
   const selectedCourier = couriers.find(c => c.code === shippingProvider);
   const trackingUrl = selectedCourier?.tracking_url_template && trackingNumber
     ? selectedCourier.tracking_url_template.replace('{tracking}', trackingNumber)
@@ -795,32 +810,42 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
             </h3>
             <div className="grid grid-cols-1 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tracking Number
-                </label>
                 <div className="flex flex-col md:flex-row gap-2">
-                  <select
-                    value={shippingProvider}
-                    onChange={(e) => setShippingProvider(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none text-black bg-white"
-                  >
-                    {couriers.filter(c => c.is_active).map(courier => (
-                      <option key={courier.id} value={courier.code}>{courier.name}</option>
-                    ))}
-                  </select>
-                  <input
-                    type="text"
-                    value={trackingNumber}
-                    onChange={(e) => setTrackingNumber(e.target.value)}
-                    placeholder={selectedCourier?.tracking_url_template ? "Enter tracking number" : "See App for details"}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none text-black"
-                  />
+                  <div>
+                    <label htmlFor="order-courier" className="block text-sm font-medium text-gray-700 mb-1">
+                      Courier
+                    </label>
+                    <select
+                      id="order-courier"
+                      value={shippingProvider}
+                      onChange={(e) => setPickedProvider(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none text-black bg-white"
+                    >
+                      {shippingProvider === '' && <option value="">Select a courier</option>}
+                      {activeCouriers.map(courier => (
+                        <option key={courier.id} value={courier.code}>{courier.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label htmlFor="order-tracking-number" className="block text-sm font-medium text-gray-700 mb-1">
+                      Tracking Number
+                    </label>
+                    <input
+                      id="order-tracking-number"
+                      type="text"
+                      value={trackingNumber}
+                      onChange={(e) => setTrackingNumber(e.target.value)}
+                      placeholder={selectedCourier?.tracking_url_template ? "Enter tracking number" : "See App for details"}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none text-black"
+                    />
+                  </div>
                   {trackingUrl && (
                     <a
                       href={trackingUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 flex items-center justify-center"
+                      className="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 flex items-center justify-center md:self-end md:mb-[1px]"
                       title="Track Shipment"
                     >
                       <Truck className="w-4 h-4" />
