@@ -1,11 +1,20 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ShieldCheck, Package, CreditCard, Activity, Copy, Check, MessageCircle, Tag, Upload, Database, Lock, Truck } from 'lucide-react';
+import { ArrowLeft, CreditCard, Activity, Check, Upload, Lock, Truck } from 'lucide-react';
 import type { CartItem } from '../types';
 import { usePaymentMethods } from '../hooks/usePaymentMethods';
 import { useShippingLocations } from '../hooks/useShippingLocations';
 import { useCouriers } from '../hooks/useCouriers';
 import { supabase } from '../lib/supabase';
 import { useImageUpload } from '../hooks/useImageUpload';
+import { formatPrice } from '../utils/currency';
+import { getUnitPrice, getLineTotal } from './checkout/pricing';
+import OrderConfirmation from './checkout/OrderConfirmation';
+import OrderSummary from './checkout/OrderSummary';
+
+const stepBadgeClass =
+    'flex items-center justify-center w-7 h-7 shrink-0 rounded-full bg-brand-50 text-brand-700 text-sm font-bold';
+
+const fieldLabelClass = 'block text-xs font-bold text-brand-700 uppercase tracking-wide mb-2';
 
 interface CheckoutProps {
     cartItems: CartItem[];
@@ -18,7 +27,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack, vali
     const { paymentMethods } = usePaymentMethods();
     const { locations: shippingLocations } = useShippingLocations();
     const { couriers } = useCouriers();
-    const [step, setStep] = useState<'details' | 'payment' | 'confirmation'>('details');
+    const [isConfirmed, setIsConfirmed] = useState(false);
 
     // Customer Details
     const [fullName, setFullName] = useState('');
@@ -40,9 +49,6 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack, vali
     const [notes, setNotes] = useState('');
 
     const [orderMessage, setOrderMessage] = useState<string>('');
-    const [copied, setCopied] = useState(false);
-    const [contactOpened] = useState(false);
-
     const [orderNumber, setOrderNumber] = useState<string>('');
 
     // Payment Proof
@@ -59,7 +65,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack, vali
 
     React.useEffect(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, [step]);
+    }, [isConfirmed]);
 
     React.useEffect(() => {
         if (paymentMethods.length > 0 && !selectedPaymentMethod) {
@@ -73,6 +79,22 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack, vali
 
     // Calculate final total (Subtotal + Shipping - Discount)
     const finalTotal = Math.max(0, totalPrice + shippingFee - discountAmount);
+
+    // Rates offered for the chosen courier. Falls back to every active location
+    // so the customer is never stranded when a courier has no matching rate.
+    const availableShippingLocations = (() => {
+        if (!selectedCourierId) return [];
+
+        const courier = couriers.find(c => c.id === selectedCourierId);
+        if (!courier) return [];
+
+        const code = courier.code.toLowerCase();
+        const matched = shippingLocations.filter(loc =>
+            loc.id.toLowerCase().includes(code) || loc.name.toLowerCase().includes(code)
+        );
+
+        return matched.length > 0 ? matched : shippingLocations;
+    })();
 
     // Handle Promo Code Application
     const handleApplyPromoCode = async () => {
@@ -154,6 +176,14 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack, vali
         }
     };
 
+    const handleRemovePromoCode = () => {
+        setAppliedPromo(null);
+        setDiscountAmount(0);
+        setPromoCode('');
+        setPromoSuccess('');
+        setPromoError('');
+    };
+
     const isDetailsValid =
         fullName.trim() !== '' &&
         email.trim() !== '' &&
@@ -166,12 +196,16 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack, vali
         selectedCourierId !== '' &&
         shippingLocation !== '';
 
-    const handleProceedToPayment = () => {
-        if (isDetailsValid) {
-            setStep('payment');
-        }
-    };
+    // Single-page checkout: the order can only be placed once the shipping
+    // details are complete AND proof of payment has been attached.
+    const canPlaceOrder = isDetailsValid && !!paymentProof && !isUploadingProof;
 
+    const missingRequirementMessage = (() => {
+        if (canPlaceOrder || isUploadingProof) return '';
+        if (!isDetailsValid && !paymentProof) return 'Complete your details above and upload your payment proof to place this order.';
+        if (!isDetailsValid) return 'Complete your details, courier and shipping region to place this order.';
+        return 'Upload your proof of payment to place this order.';
+    })();
 
     const handlePlaceOrder = async () => {
         if (!shippingLocation) {
@@ -208,14 +242,7 @@ const Checkout: React.FC<CheckoutProps> = ({ cartItems, totalPrice, onBack, vali
             }
 
             const orderItems = cartItems.map(item => {
-                const basePrice = item.variation ? item.variation.price : item.product.base_price;
-                let currentPrice = basePrice;
-                const isDiscounted = item.variation
-                    ? (item.variation.discount_active && item.variation.discount_price !== null && item.variation.discount_price < basePrice)
-                    : (item.product.discount_active && item.product.discount_price !== null && item.product.discount_price < item.product.base_price);
-                if (isDiscounted) {
-                    currentPrice = item.variation?.discount_price ?? item.product.discount_price ?? basePrice;
-                }
+                const currentPrice = getUnitPrice(item);
 
                 return {
                     product_id: item.product.id,
@@ -323,16 +350,7 @@ ${cartItems.map(item => {
                 if (item.variation) {
                     line += ` (${item.variation.name})`;
                 }
-                const basePrice = item.variation ? item.variation.price : item.product.base_price;
-                let currentPrice = basePrice;
-                const isDiscounted = item.variation
-                    ? (item.variation.discount_active && item.variation.discount_price !== null && item.variation.discount_price < basePrice)
-                    : (item.product.discount_active && item.product.discount_price !== null && item.product.discount_price < item.product.base_price);
-                if (isDiscounted) {
-                    currentPrice = item.variation?.discount_price ?? item.product.discount_price ?? basePrice;
-                }
-
-                line += ` x${item.quantity} - ₱${(currentPrice * item.quantity).toLocaleString('en-PH', { minimumFractionDigits: 0 })}`;
+                line += ` x${item.quantity} - ${formatPrice(getLineTotal(item))}`;
                 if (item.product.purity_percentage && item.product.purity_percentage > 0) {
                     line += `\n  Purity: ${item.product.purity_percentage}%`;
                 }
@@ -361,386 +379,19 @@ Please confirm this order. Thank you!
 
             setOrderMessage(orderDetails);
 
-            // Auto-copy to clipboard
-            try {
-                await navigator.clipboard.writeText(orderDetails);
-                setCopied(true);
-            } catch (err) {
-                console.error('Failed to auto-copy:', err);
-            }
-
-            // Show confirmation
-            setStep('confirmation');
-
-            // Auto-open WhatsApp
-            setTimeout(() => {
-                const whatsappUrl = `https://wa.me/639179966191?text=${encodeURIComponent(orderDetails)}`;
-                window.open(whatsappUrl, '_blank');
-            }, 1500);
+            // Hand off to the confirmation screen, which auto-copies the summary
+            // and opens the customer's messaging app.
+            setIsConfirmed(true);
         } catch (error) {
             console.error('❌ Error placing order:', error);
             alert(`Failed to place order: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`);
         }
     };
 
-    const handleCopyMessage = async () => {
-        try {
-            await navigator.clipboard.writeText(orderMessage);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 3000);
-        } catch (error) {
-            console.error('Failed to copy:', error);
-            // Fallback
-            alert('Failed to copy. Please manually select and copy the message.');
-        }
-    };
-
-    const handleOpenContact = () => {
-        const contactUrl = `https://wa.me/639179966191?text=${encodeURIComponent(orderMessage)}`;
-        window.open(contactUrl, '_blank');
-    };
-
-    const handleOpenViber = () => {
-        const viberUrl = `viber://chat?number=%2B639179966191`;
-        window.open(viberUrl, '_blank');
-    };
-
-    const handleOpenMessenger = async () => {
-        try {
-            await navigator.clipboard.writeText(orderMessage);
-            setCopied(true);
-        } catch (err) {
-            console.error('Failed to copy before opening Messenger:', err);
-        }
-        window.open('https://m.me/britt.arellano.7', '_blank');
-    };
-
-    if (step === 'confirmation') {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-white via-brand-50 to-white flex items-center justify-center px-4 py-12">
-                <div className="max-w-2xl w-full">
-                    <div className="bg-white rounded shadow-clinical p-8 md:p-12 text-center border border-gray-100">
-                        <div className="bg-emerald-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
-                            <ShieldCheck className="w-12 h-12 text-emerald-600" />
-                        </div>
-                        <h1 className="font-heading text-3xl md:text-4xl font-bold text-charcoal-900 mb-4 tracking-tight">
-                            Order Confirmed
-                        </h1>
-                        <p className="text-gray-600 mb-4 text-base md:text-lg leading-relaxed">
-                            Your order details have been pre-filled. Just hit send via WhatsApp to finalize your order!
-                        </p>
-
-                        {/* Order ID Display */}
-                        {orderNumber && (
-                            <div className="bg-brand-50/20 border border-brand-100 rounded-lg p-4 mb-6">
-                                <p className="text-sm text-brand-700 mb-1 font-bold uppercase tracking-wider">Order Reference</p>
-                                <p className="text-2xl font-bold text-charcoal-900 font-mono">
-                                    {orderNumber}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-2">Use this reference for tracking and support</p>
-                            </div>
-                        )}
-
-                        {/* Order Message Display */}
-                        <div className="bg-gray-50 rounded-lg p-6 mb-6 text-left border border-gray-200">
-                            <div className="flex items-center justify-between mb-3">
-                                <h3 className="font-bold text-charcoal-900 flex items-center gap-2">
-                                    <MessageCircle className="w-5 h-5 text-brand-600" />
-                                    Order Details
-                                </h3>
-                                <button
-                                    onClick={handleCopyMessage}
-                                    className="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded font-medium transition-all text-sm shadow-sm"
-                                >
-                                    {copied ? (
-                                        <>
-                                            <Check className="w-4 h-4" />
-                                            Copied!
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Copy className="w-4 h-4" />
-                                            Copy
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                            <div className="bg-white rounded p-4 border border-gray-300 max-h-64 overflow-y-auto">
-                                <pre className="whitespace-pre-wrap text-sm text-gray-700 font-mono">
-                                    {orderMessage}
-                                </pre>
-                            </div>
-                            {copied && (
-                                <p className="text-emerald-600 text-sm mt-2 flex items-center gap-1 font-medium">
-                                    <Check className="w-4 h-4" />
-                                    Copied to clipboard! Ready to send.
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="space-y-3 mb-8">
-                            <button
-                                onClick={handleOpenContact}
-                                className="w-full btn-primary py-4 text-base flex items-center justify-center gap-2 shadow-lg"
-                            >
-                                <MessageCircle className="w-5 h-5" />
-                                Open WhatsApp & Send
-                            </button>
-
-                            <button
-                                onClick={handleOpenViber}
-                                className="w-full py-4 text-base flex items-center justify-center gap-2 shadow-lg rounded bg-[#7360f2] hover:bg-[#5d4dd1] text-white font-medium transition-all"
-                            >
-                                <MessageCircle className="w-5 h-5" />
-                                Open Viber & Send
-                            </button>
-
-                            <button
-                                onClick={handleOpenMessenger}
-                                className="w-full py-4 text-base flex items-center justify-center gap-2 shadow-lg rounded bg-[#0084ff] hover:bg-[#006fdb] text-white font-medium transition-all"
-                            >
-                                <MessageCircle className="w-5 h-5" />
-                                Open Messenger & Paste
-                            </button>
-
-                            <p className="text-sm text-gray-500">
-                                Your order details are auto-copied. If no app opens, send the copied message to <span className="font-bold">+63 917 996 6191 on WhatsApp/Viber</span> or <span className="font-bold">m.me/britt.arellano.7 on Messenger</span>.
-                            </p>
-                        </div>
-
-                        <div className="bg-brand-50/20 rounded-lg p-6 mb-8 text-left border border-brand-100">
-                            <h3 className="font-bold text-charcoal-900 mb-4 flex items-center gap-2">
-                                <Activity className="w-5 h-5 text-brand-600" />
-                                Next Steps
-                            </h3>
-                            <ul className="space-y-3 text-sm text-gray-700">
-                                <li className="flex items-start gap-3">
-                                    <span className="font-bold text-brand-500">1.</span>
-                                    <span>Confirmation within 24 hours of payment receipt.</span>
-                                </li>
-                                <li className="flex items-start gap-3">
-                                    <span className="font-bold text-brand-500">2.</span>
-                                    <span>Research-grade packaging and secure handling.</span>
-                                </li>
-                                <li className="flex items-start gap-3">
-                                    <span className="font-bold text-brand-500">3.</span>
-                                    <span>Same-day shipping for verified payments before 11 AM.</span>
-                                </li>
-                                <li className="flex items-start gap-3">
-                                    <span className="font-bold text-brand-500">4.</span>
-                                    <span>Tracking details sent via your selected contact method after dispatch.</span>
-                                </li>
-                            </ul>
-                        </div>
-
-                        <button
-                            onClick={() => {
-                                window.scrollTo({ top: 0, behavior: 'smooth' });
-                                window.location.href = '/';
-                            }}
-                            className="w-full btn-secondary py-3 flex items-center justify-center gap-2"
-                        >
-                            <ArrowLeft className="w-4 h-4" />
-                            Return to Catalog
-                        </button>
-                    </div>
-                </div>
-            </div >
-        );
+    if (isConfirmed) {
+        return <OrderConfirmation orderNumber={orderNumber} orderMessage={orderMessage} />;
     }
 
-    // Payment Step
-    if (step === 'payment') {
-        return (
-            <div className="min-h-screen bg-cool-gray py-6 md:py-8">
-                <div className="container mx-auto px-4 max-w-5xl">
-                    <button
-                        onClick={() => setStep('details')}
-                        className="text-gray-500 hover:text-brand-600 font-medium mb-6 flex items-center gap-2 transition-colors group text-sm"
-                    >
-                        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                        <span>Back to Details</span>
-                    </button>
-
-                    <h1 className="font-heading text-2xl md:text-3xl font-bold text-charcoal-900 mb-8 flex items-center gap-3">
-                        Payment & Verification
-                        <Lock className="w-6 h-6 text-brand-600" />
-                    </h1>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <div className="lg:col-span-2 space-y-6">
-
-                            {/* Payment Methods */}
-                            <div className="bg-white rounded shadow-clinical p-6 border border-gray-100">
-                                <h2 className="font-heading text-lg font-bold text-charcoal-900 mb-4 flex items-center gap-2">
-                                    <CreditCard className="w-5 h-5 text-brand-600" />
-                                    Select Payment Method
-                                </h2>
-                                <div className="space-y-3">
-                                    {paymentMethods.map((method) => (
-                                        <div key={method.id}>
-                                            <label
-                                                className={`block p-4 rounded border cursor-pointer transition-all ${selectedPaymentMethod === method.id
-                                                    ? 'border-brand-500 bg-brand-50/20 ring-1 ring-brand-500'
-                                                    : 'border-gray-200 hover:border-brand-300'
-                                                    }`}
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <input
-                                                        type="radio"
-                                                        name="paymentMethod"
-                                                        value={method.id}
-                                                        checked={selectedPaymentMethod === method.id}
-                                                        onChange={(e) => setSelectedPaymentMethod(e.target.value)}
-                                                        className="text-brand-600 focus:ring-brand-500"
-                                                    />
-                                                    <div className="flex-1">
-                                                        <div className="flex justify-between items-start">
-                                                            <div>
-                                                                <p className="font-bold text-charcoal-900">{method.name}</p>
-                                                                <p className="text-sm text-gray-600 font-mono mt-1">{method.account_number}</p>
-                                                                {method.account_name && (
-                                                                    <p className="text-xs text-gray-500 mt-0.5">Account Name: {method.account_name}</p>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </label>
-
-                                            {/* Show QR Code if this method is selected and has a QR code */}
-                                            {selectedPaymentMethod === method.id && method.qr_code_url && (
-                                                <div className="mt-2 ml-8 mb-4 p-4 bg-white border border-gray-100 rounded-lg shadow-sm">
-                                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 text-center">Scan to Pay</p>
-                                                    <div className="flex justify-center">
-                                                        <img
-                                                            src={method.qr_code_url}
-                                                            alt={`${method.name} QR Code`}
-                                                            className="max-w-[200px] w-full h-auto rounded-lg border border-gray-200"
-                                                        />
-                                                    </div>
-                                                    <p className="text-xs text-center text-gray-400 mt-2">
-                                                        Screenshot your payment and upload it below
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Payment Proof Upload */}
-                            <div className="bg-white rounded shadow-clinical p-6 border border-gray-100">
-                                <h2 className="font-heading text-lg font-bold text-charcoal-900 mb-4 flex items-center gap-2">
-                                    <Upload className="w-5 h-5 text-brand-600" />
-                                    Upload Proof of Payment
-                                </h2>
-                                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-brand-400 transition-colors bg-gray-50/50">
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={(e) => {
-                                            if (e.target.files && e.target.files[0]) {
-                                                setPaymentProof(e.target.files[0]);
-                                            }
-                                        }}
-                                        className="hidden"
-                                        id="payment-proof-upload"
-                                    />
-                                    <label htmlFor="payment-proof-upload" className="cursor-pointer flex flex-col items-center">
-                                        {paymentProof ? (
-                                            <>
-                                                <Check className="w-12 h-12 text-emerald-600 mb-3" />
-                                                <p className="font-medium text-charcoal-900">{paymentProof.name}</p>
-                                                <p className="text-sm text-gray-500 mt-1">Click to change file</p>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Upload className="w-12 h-12 text-gray-400 mb-3" />
-                                                <p className="font-medium text-charcoal-900">Click to upload screenshot</p>
-                                                <p className="text-xs text-gray-500 mt-1">Gcash/Bank transfer receipt</p>
-                                            </>
-                                        )}
-                                    </label>
-                                </div>
-                            </div>
-
-                            {/* Notes */}
-                            <div className="bg-white rounded shadow-clinical p-6 border border-gray-100">
-                                <h2 className="font-heading text-lg font-bold text-charcoal-900 mb-4">
-                                    Additional Notes (Optional)
-                                </h2>
-                                <textarea
-                                    value={notes}
-                                    onChange={(e) => setNotes(e.target.value)}
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-sm h-24"
-                                    placeholder="Special instructions for delivery..."
-                                />
-                            </div>
-
-                            <button
-                                onClick={handlePlaceOrder}
-                                disabled={!paymentProof || isUploadingProof}
-                                className="w-full btn-primary py-4 text-base shadow-lg flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-                            >
-                                {isUploadingProof ? 'Uploading Proof...' : 'Complete Order'}
-                            </button>
-                        </div>
-
-                        {/* Sidebar Summary (Reused logic, simplified UI) */}
-                        <div className="lg:col-span-1">
-                            <div className="bg-white rounded shadow-clinical p-6 sticky top-24 border border-gray-100">
-                                <h3 className="font-heading font-bold text-charcoal-900 mb-4">Order Summary</h3>
-                                <div className="space-y-2 mb-4">
-                                    {cartItems.map((item, idx) => {
-                                        const basePrice = item.variation ? item.variation.price : item.product.base_price;
-                                        let currentPrice = basePrice;
-                                        const isDiscounted = item.variation
-                                            ? (item.variation.discount_active && item.variation.discount_price !== null && item.variation.discount_price < basePrice)
-                                            : (item.product.discount_active && item.product.discount_price !== null && item.product.discount_price < item.product.base_price);
-                                        if (isDiscounted) {
-                                            currentPrice = item.variation?.discount_price ?? item.product.discount_price ?? basePrice;
-                                        }
-
-                                        return (
-                                            <div key={idx} className="flex justify-between text-sm">
-                                                <span className="text-gray-600">{item.quantity}x {item.product.name}</span>
-                                                <span className="font-medium">₱{(currentPrice * item.quantity).toLocaleString()}</span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                                <div className="border-t border-gray-100 pt-3 space-y-2 text-sm">
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Subtotal</span>
-                                        <span>₱{totalPrice.toLocaleString()}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Shipping</span>
-                                        <span>₱{shippingFee.toLocaleString()}</span>
-                                    </div>
-                                    {discountAmount > 0 && (
-                                        <div className="flex justify-between text-emerald-600 font-medium">
-                                            <span>Discount</span>
-                                            <span>-₱{discountAmount.toLocaleString()}</span>
-                                        </div>
-                                    )}
-                                    <div className="flex justify-between font-bold text-charcoal-900 text-lg pt-2">
-                                        <span>Total</span>
-                                        <span>₱{finalTotal.toLocaleString()}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // Details Step
     return (
         <div className="min-h-screen bg-cool-gray py-6 md:py-8">
             <div className="container mx-auto px-4 max-w-6xl">
@@ -752,27 +403,28 @@ Please confirm this order. Thank you!
                     <span>Back to Cart</span>
                 </button>
 
-                <h1 className="font-heading text-2xl md:text-3xl font-bold text-charcoal-900 mb-8 flex items-center gap-3">
-                    Checkout Information
-                    <Activity className="w-6 h-6 text-brand-600" />
-                </h1>
+                <header className="mb-8">
+                    <h1 className="font-heading text-2xl md:text-3xl font-bold text-charcoal-900 flex items-center gap-3">
+                        Checkout
+                        <Activity className="w-6 h-6 text-brand-600" />
+                    </h1>
+                    <p className="text-sm text-gray-500 mt-2">
+                        Everything happens on this page — fill in your details, pay, then place your order.
+                    </p>
+                </header>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                     {/* Main Form */}
                     <div className="lg:col-span-2 space-y-6">
                         {/* Customer Information */}
-                        <div className="bg-white rounded shadow-clinical p-6 border border-gray-100">
-                            <h2 className="font-heading text-lg font-bold text-charcoal-900 mb-6 flex items-center gap-2">
-                                <div className="bg-brand-50 p-2 rounded text-brand-600">
-                                    <Package className="w-5 h-5" />
-                                </div>
-                                Customer Details
+                        <section className="bg-white rounded shadow-clinical p-6 border border-gray-100">
+                            <h2 className="font-heading text-lg font-bold text-charcoal-900 mb-6 flex items-center gap-3">
+                                <span className={stepBadgeClass}>1</span>
+                                <span>Customer Details</span>
                             </h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="md:col-span-2">
-                                    <label className="block text-xs font-bold text-brand-700 uppercase tracking-wide mb-2">
-                                        Full Name *
-                                    </label>
+                                    <label className={fieldLabelClass}>Full Name *</label>
                                     <input
                                         type="text"
                                         value={fullName}
@@ -783,9 +435,7 @@ Please confirm this order. Thank you!
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-brand-700 uppercase tracking-wide mb-2">
-                                        Facebook or WhatsApp Name *
-                                    </label>
+                                    <label className={fieldLabelClass}>Facebook or WhatsApp Name *</label>
                                     <input
                                         type="text"
                                         value={email}
@@ -796,9 +446,7 @@ Please confirm this order. Thank you!
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-brand-700 uppercase tracking-wide mb-2">
-                                        Phone Number *
-                                    </label>
+                                    <label className={fieldLabelClass}>Phone Number *</label>
                                     <input
                                         type="tel"
                                         value={phone}
@@ -809,21 +457,17 @@ Please confirm this order. Thank you!
                                     />
                                 </div>
                             </div>
-                        </div>
+                        </section>
 
                         {/* Shipping Address */}
-                        <div className="bg-white rounded shadow-clinical p-6 border border-gray-100">
-                            <h2 className="font-heading text-lg font-bold text-charcoal-900 mb-6 flex items-center gap-2">
-                                <div className="bg-brand-50 p-2 rounded text-brand-600">
-                                    <Database className="w-5 h-5" />
-                                </div>
-                                Shipping Address
+                        <section className="bg-white rounded shadow-clinical p-6 border border-gray-100">
+                            <h2 className="font-heading text-lg font-bold text-charcoal-900 mb-6 flex items-center gap-3">
+                                <span className={stepBadgeClass}>2</span>
+                                <span>Shipping Address</span>
                             </h2>
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-brand-700 uppercase tracking-wide mb-2">
-                                        Street Address *
-                                    </label>
+                                    <label className={fieldLabelClass}>Street Address *</label>
                                     <input
                                         type="text"
                                         value={address}
@@ -834,9 +478,7 @@ Please confirm this order. Thank you!
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-brand-700 uppercase tracking-wide mb-2">
-                                        Barangay *
-                                    </label>
+                                    <label className={fieldLabelClass}>Barangay *</label>
                                     <input
                                         type="text"
                                         value={barangay}
@@ -848,9 +490,7 @@ Please confirm this order. Thank you!
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-xs font-bold text-brand-700 uppercase tracking-wide mb-2">
-                                            City *
-                                        </label>
+                                        <label className={fieldLabelClass}>City *</label>
                                         <input
                                             type="text"
                                             value={city}
@@ -861,9 +501,7 @@ Please confirm this order. Thank you!
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-brand-700 uppercase tracking-wide mb-2">
-                                            Province *
-                                        </label>
+                                        <label className={fieldLabelClass}>Province *</label>
                                         <input
                                             type="text"
                                             value={state}
@@ -875,9 +513,7 @@ Please confirm this order. Thank you!
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-brand-700 uppercase tracking-wide mb-2">
-                                        ZIP/Postal Code *
-                                    </label>
+                                    <label className={fieldLabelClass}>ZIP/Postal Code *</label>
                                     <input
                                         type="text"
                                         value={zipCode}
@@ -888,190 +524,215 @@ Please confirm this order. Thank you!
                                     />
                                 </div>
                             </div>
-                        </div>
+                        </section>
 
-
-                    {/* Courier Selection */}
-                    <div className="bg-white rounded shadow-clinical p-6 border border-gray-100">
-                        <h2 className="font-heading text-lg font-bold text-charcoal-900 mb-3 flex items-center gap-2">
-                            <Truck className="w-5 h-5 text-brand-600" />
-                            Select Courier Provider *
-                        </h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            {couriers
-                                .filter(c => c.is_active)
-                                .map((courier) => (
-                                    <button
-                                        key={courier.id}
-                                        onClick={() => {
-                                            setSelectedCourierId(courier.id);
-                                            setShippingLocation(''); // Reset location when courier changes
-                                        }}
-                                        className={`p-4 rounded border transition-all text-left flex items-center gap-3 ${selectedCourierId === courier.id
-                                            ? 'border-brand-600 bg-brand-50 ring-1 ring-brand-600'
-                                            : 'border-gray-200 hover:border-brand-300'
-                                            }`}
-                                    >
-                                        <div className="font-bold text-charcoal-900 text-sm">{courier.name}</div>
-                                    </button>
-                                ))}
-                        </div>
-                    </div>
-
-                    {/* Shipping Location Selection */}
-                    <div className={`bg-white rounded shadow-clinical p-6 border border-gray-100 transition-opacity duration-300 ${!selectedCourierId ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-                        <h2 className="font-heading text-lg font-bold text-charcoal-900 mb-3 flex items-center gap-2">
-                            Choose Shipping Region *
-                        </h2>
-                        <p className="text-xs text-gray-500 mb-6 bg-pink-50 p-3 rounded border border-pink-100">
-                            {selectedCourierId
-                                ? 'Select the rate applicable to your location.'
-                                : 'Please select a courier provider above first.'}
-                        </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {(() => {
-                                if (!selectedCourierId) return [];
-                                const courier = couriers.find(c => c.id === selectedCourierId);
-                                if (!courier) return [];
-
-                                const code = courier.code.toLowerCase();
-                                const matched = shippingLocations.filter(loc =>
-                                    loc.id.toLowerCase().includes(code) ||
-                                    loc.name.toLowerCase().includes(code)
-                                );
-
-                                // Fallback: if no locations match this courier's code,
-                                // show all active locations so the user isn't stuck.
-                                return matched.length > 0 ? matched : shippingLocations;
-                            })()
-                                .map((loc) => (
-                                    <button
-                                        key={loc.id}
-                                        onClick={() => setShippingLocation(loc.id)}
-                                        className={`p-4 rounded border transition-all text-left ${shippingLocation === loc.id
-                                            ? 'border-brand-600 bg-brand-50 ring-1 ring-brand-600'
-                                            : 'border-gray-200 hover:border-brand-300'
-                                            }`}
-                                    >
-                                        <p className="font-bold text-charcoal-900 text-sm mb-1">{loc.name || loc.id.replace('_', ' & ')}</p>
-                                        <p className="text-xs text-brand-600 font-medium">₱{loc.fee}</p>
-                                    </button>
-                                ))}
-                        </div>
-                    </div>
-
-                    <button
-                        onClick={handleProceedToPayment}
-                        disabled={!isDetailsValid}
-                        className={`w-full py-4 rounded font-bold text-base transition-all transform shadow-md ${isDetailsValid
-                            ? 'btn-primary hover:scale-[1.01]'
-                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                            }`}
-                    >
-                        Proceed to Payment
-                    </button>
-                    </div>
-                </div>
-
-                {/* Order Summary Sidebar */}
-                <div className="lg:col-span-1">
-                    <div className="bg-white rounded shadow-clinical p-6 sticky top-24 border border-gray-100">
-                        <h2 className="font-heading text-lg font-bold text-charcoal-900 mb-6 flex items-center gap-2">
-                            Order Summary
-                            <Activity className="w-4 h-4 text-brand-600" />
-                        </h2>
-
-                        <div className="space-y-4 mb-6">
-                            {cartItems.map((item, index) => {
-                                const basePrice = item.variation ? item.variation.price : item.product.base_price;
-                                let currentPrice = basePrice;
-                                const isDiscounted = item.variation
-                                    ? (item.variation.discount_active && item.variation.discount_price !== null && item.variation.discount_price < basePrice)
-                                    : (item.product.discount_active && item.product.discount_price !== null && item.product.discount_price < item.product.base_price);
-
-                                if (isDiscounted) {
-                                    currentPrice = item.variation?.discount_price ?? item.product.discount_price ?? basePrice;
-                                }
-
-                                return (
-                                    <div key={index} className="pb-4 border-b border-gray-100">
-                                        <div className="flex justify-between items-start mb-1">
-                                            <div className="flex-1">
-                                                <h4 className="font-bold text-charcoal-900 text-sm">{item.product.name}</h4>
-                                                {item.variation && (
-                                                    <p className="text-xs text-gray-600 mt-0.5">{item.variation.name}</p>
-                                                )}
-                                            </div>
-                                            <span className="font-bold text-charcoal-900 text-sm">
-                                                ₱{(currentPrice * item.quantity).toLocaleString('en-PH', { minimumFractionDigits: 0 })}
-                                            </span>
-                                        </div>
-                                        <p className="text-xs text-gray-400">Qty: {item.quantity}</p>
-                                    </div>
-                                )
-                            })}
-                        </div>
-
-                        {/* Promo Code */}
-                        <div className="mb-6 pt-2">
-                            <p className="text-xs font-bold text-brand-700 uppercase mb-2 flex items-center gap-1">
-                                <Tag className="w-3 h-3" /> Promo Code
-                            </p>
-                            <div className="flex gap-2">
-                                <input
-                                    type="text"
-                                    value={promoCode}
-                                    onChange={(e) => setPromoCode(e.target.value)}
-                                    placeholder="ENTER CODE"
-                                    className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-brand-500 focus:border-brand-500 outline-none uppercase"
-                                    disabled={!!appliedPromo || isApplyingPromo}
-                                />
-                                {appliedPromo ? (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setAppliedPromo(null);
-                                            setDiscountAmount(0);
-                                            setPromoCode('');
-                                            setPromoSuccess('');
-                                        }}
-                                        className="px-3 py-2 bg-red-50 text-red-600 rounded text-xs font-bold border border-red-100 hover:bg-red-100 shrink-0 whitespace-nowrap"
-                                    >
-                                        REMOVE
-                                    </button>
-                                ) : (
-                                    <button
-                                        type="button"
-                                        onClick={handleApplyPromoCode}
-                                        disabled={!promoCode || isApplyingPromo}
-                                        className="px-3 py-2 bg-brand-600 text-white rounded text-xs font-bold hover:bg-brand-700 disabled:opacity-50 shrink-0 whitespace-nowrap"
-                                    >
-                                        APPLY
-                                    </button>
-                                )}
+                        {/* Delivery: courier + region */}
+                        <section className="bg-white rounded shadow-clinical p-6 border border-gray-100">
+                            <h2 className="font-heading text-lg font-bold text-charcoal-900 mb-6 flex items-center gap-3">
+                                <span className={stepBadgeClass}>3</span>
+                                <span className="flex items-center gap-2">
+                                    <Truck className="w-5 h-5 text-brand-600" />
+                                    Select Courier Provider *
+                                </span>
+                            </h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                {couriers
+                                    .filter(c => c.is_active)
+                                    .map((courier) => (
+                                        <button
+                                            key={courier.id}
+                                            type="button"
+                                            onClick={() => {
+                                                setSelectedCourierId(courier.id);
+                                                setShippingLocation(''); // Reset location when courier changes
+                                            }}
+                                            className={`p-4 rounded border transition-all text-left flex items-center gap-3 ${selectedCourierId === courier.id
+                                                ? 'border-brand-600 bg-brand-50 ring-1 ring-brand-600'
+                                                : 'border-gray-200 hover:border-brand-300'
+                                                }`}
+                                        >
+                                            <div className="font-bold text-charcoal-900 text-sm">{courier.name}</div>
+                                        </button>
+                                    ))}
                             </div>
-                            {promoError && <p className="text-red-500 text-xs mt-1">{promoError}</p>}
-                            {promoSuccess && <p className="text-emerald-600 text-xs mt-1 font-medium">{promoSuccess}</p>}
-                        </div>
 
-                        <div className="space-y-2 text-sm text-gray-600 border-t border-gray-100 pt-4">
-                            <div className="flex justify-between">
-                                <span>Subtotal</span>
-                                <span>₱{totalPrice.toLocaleString()}</span>
-                            </div>
-                            {discountAmount > 0 && (
-                                <div className="flex justify-between text-emerald-600 font-medium">
-                                    <span>Discount</span>
-                                    <span>-₱{discountAmount.toLocaleString()}</span>
+                            <div className={`mt-8 transition-opacity duration-300 ${!selectedCourierId ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+                                <h3 className="font-heading text-base font-bold text-charcoal-900 mb-3">
+                                    Choose Shipping Region *
+                                </h3>
+                                <p className="text-xs text-gray-500 mb-4 bg-pink-50 p-3 rounded border border-pink-100">
+                                    {selectedCourierId
+                                        ? 'Select the rate applicable to your location.'
+                                        : 'Please select a courier provider above first.'}
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {availableShippingLocations.map((loc) => (
+                                        <button
+                                            key={loc.id}
+                                            type="button"
+                                            onClick={() => setShippingLocation(loc.id)}
+                                            className={`p-4 rounded border transition-all text-left ${shippingLocation === loc.id
+                                                ? 'border-brand-600 bg-brand-50 ring-1 ring-brand-600'
+                                                : 'border-gray-200 hover:border-brand-300'
+                                                }`}
+                                        >
+                                            <p className="font-bold text-charcoal-900 text-sm mb-1">{loc.name || loc.id.replace('_', ' & ')}</p>
+                                            <p className="text-xs text-brand-600 font-medium">{formatPrice(loc.fee)}</p>
+                                        </button>
+                                    ))}
                                 </div>
-                            )}
-                            <div className="flex justify-between font-bold text-charcoal-900 text-base pt-2">
-                                <span>Total Estimate</span>
-                                <span>₱{Math.max(0, totalPrice - discountAmount).toLocaleString()}</span>
                             </div>
-                            <p className="text-xs text-gray-400 text-right italic">+ Shipping fee added at payment</p>
-                        </div>
+                        </section>
 
+                        {/* Payment Method */}
+                        <section className="bg-white rounded shadow-clinical p-6 border border-gray-100">
+                            <h2 className="font-heading text-lg font-bold text-charcoal-900 mb-6 flex items-center gap-3">
+                                <span className={stepBadgeClass}>4</span>
+                                <span className="flex items-center gap-2">
+                                    <CreditCard className="w-5 h-5 text-brand-600" />
+                                    Select Payment Method
+                                </span>
+                            </h2>
+                            <div className="space-y-3">
+                                {paymentMethods.map((method) => (
+                                    <div key={method.id}>
+                                        <label
+                                            className={`block p-4 rounded border cursor-pointer transition-all ${selectedPaymentMethod === method.id
+                                                ? 'border-brand-500 bg-brand-50/20 ring-1 ring-brand-500'
+                                                : 'border-gray-200 hover:border-brand-300'
+                                                }`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <input
+                                                    type="radio"
+                                                    name="paymentMethod"
+                                                    value={method.id}
+                                                    checked={selectedPaymentMethod === method.id}
+                                                    onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+                                                    className="text-brand-600 focus:ring-brand-500"
+                                                />
+                                                <div className="flex-1">
+                                                    <p className="font-bold text-charcoal-900">{method.name}</p>
+                                                    <p className="text-sm text-gray-600 font-mono mt-1">{method.account_number}</p>
+                                                    {method.account_name && (
+                                                        <p className="text-xs text-gray-500 mt-0.5">Account Name: {method.account_name}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </label>
+
+                                        {/* Show QR Code if this method is selected and has a QR code */}
+                                        {selectedPaymentMethod === method.id && method.qr_code_url && (
+                                            <div className="mt-2 ml-8 mb-4 p-4 bg-white border border-gray-100 rounded-lg shadow-sm">
+                                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 text-center">Scan to Pay</p>
+                                                <div className="flex justify-center">
+                                                    <img
+                                                        src={method.qr_code_url}
+                                                        alt={`${method.name} QR Code`}
+                                                        className="max-w-[200px] w-full h-auto rounded-lg border border-gray-200"
+                                                    />
+                                                </div>
+                                                <p className="text-xs text-center text-gray-400 mt-2">
+                                                    Screenshot your payment and upload it below
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+
+                        {/* Payment Proof Upload */}
+                        <section className="bg-white rounded shadow-clinical p-6 border border-gray-100">
+                            <h2 className="font-heading text-lg font-bold text-charcoal-900 mb-6 flex items-center gap-3">
+                                <span className={stepBadgeClass}>5</span>
+                                <span className="flex items-center gap-2">
+                                    <Upload className="w-5 h-5 text-brand-600" />
+                                    Upload Proof of Payment
+                                </span>
+                            </h2>
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-brand-400 transition-colors bg-gray-50/50">
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        if (e.target.files && e.target.files[0]) {
+                                            setPaymentProof(e.target.files[0]);
+                                        }
+                                    }}
+                                    className="hidden"
+                                    id="payment-proof-upload"
+                                />
+                                <label htmlFor="payment-proof-upload" className="cursor-pointer flex flex-col items-center">
+                                    {paymentProof ? (
+                                        <>
+                                            <Check className="w-12 h-12 text-emerald-600 mb-3" />
+                                            <p className="font-medium text-charcoal-900">{paymentProof.name}</p>
+                                            <p className="text-sm text-gray-500 mt-1">Click to change file</p>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Upload className="w-12 h-12 text-gray-400 mb-3" />
+                                            <p className="font-medium text-charcoal-900">Click to upload screenshot</p>
+                                            <p className="text-xs text-gray-500 mt-1">Gcash/Bank transfer receipt</p>
+                                        </>
+                                    )}
+                                </label>
+                            </div>
+                        </section>
+
+                        {/* Notes */}
+                        <section className="bg-white rounded shadow-clinical p-6 border border-gray-100">
+                            <h2 className="font-heading text-lg font-bold text-charcoal-900 mb-4">
+                                Additional Notes (Optional)
+                            </h2>
+                            <textarea
+                                value={notes}
+                                onChange={(e) => setNotes(e.target.value)}
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-sm h-24"
+                                placeholder="Special instructions for delivery..."
+                            />
+                        </section>
+
+                        <div className="space-y-3">
+                            {missingRequirementMessage && (
+                                <p className="text-sm text-gray-500 flex items-center gap-2">
+                                    <Lock className="w-4 h-4 text-gray-400" />
+                                    {missingRequirementMessage}
+                                </p>
+                            )}
+                            <button
+                                type="button"
+                                onClick={handlePlaceOrder}
+                                disabled={!canPlaceOrder}
+                                className={`w-full py-4 rounded font-bold text-base transition-all transform shadow-md flex items-center justify-center gap-2 ${canPlaceOrder
+                                    ? 'btn-primary hover:scale-[1.01]'
+                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    }`}
+                            >
+                                {isUploadingProof ? 'Uploading Proof...' : 'Complete Order'}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Order Summary Sidebar */}
+                    <div className="lg:col-span-1">
+                        <OrderSummary
+                            cartItems={cartItems}
+                            subtotal={totalPrice}
+                            shippingFee={shippingFee}
+                            discountAmount={discountAmount}
+                            finalTotal={finalTotal}
+                            hasSelectedRegion={shippingLocation !== ''}
+                            promoCode={promoCode}
+                            onPromoCodeChange={setPromoCode}
+                            onApplyPromo={handleApplyPromoCode}
+                            onRemovePromo={handleRemovePromoCode}
+                            isPromoApplied={!!appliedPromo}
+                            isApplyingPromo={isApplyingPromo}
+                            promoError={promoError}
+                            promoSuccess={promoSuccess}
+                        />
                     </div>
                 </div>
             </div>
