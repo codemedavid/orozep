@@ -3,6 +3,7 @@ import MenuItemCard from './MenuItemCard';
 import Hero from './Hero';
 import ProductDetailModal from './ProductDetailModal';
 import type { Product, ProductVariation, CartItem } from '../types';
+import { filterStorefrontProducts } from '../utils/inventory';
 import { Search, SlidersHorizontal, Package, FlaskConical, ShieldCheck, Truck, BadgeCheck, Microscope, ArrowRight } from 'lucide-react';
 
 interface MenuProps {
@@ -69,7 +70,12 @@ const Menu: React.FC<MenuProps> = ({ menuItems, addToCart, cartItems }) => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const productsRef = useRef<HTMLDivElement | null>(null);
 
-  const filteredProducts = menuItems.filter(product =>
+  // Sold-out products drop off the catalog automatically — no operator has to
+  // untick "available". Filtering here (rather than inside the card) keeps the
+  // product count and the empty state honest.
+  const inStockProducts = filterStorefrontProducts(menuItems);
+
+  const filteredProducts = inStockProducts.filter(product =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     product.description.toLowerCase().includes(searchQuery.toLowerCase())
   );

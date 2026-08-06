@@ -3,7 +3,13 @@ import type { CartItem, Product, ProductVariation } from '../types';
 import { supabase } from '../lib/supabase';
 
 // Checks cart items against the database and drops products that have been
-// deleted or marked unavailable (and items whose variation no longer exists).
+// deleted, marked unavailable, or sold out (and items whose variation no longer
+// exists or has run out). Stock is re-read live because the product snapshot
+// stored in localStorage can be days old.
+//
+// Fails open: if a lookup errors we keep the cart as-is rather than emptying a
+// shopper's basket over a transient outage. The admin order screen still blocks
+// confirming an order with insufficient stock.
 async function filterValidCartItems(items: CartItem[]): Promise<{ validItems: CartItem[]; removedNames: string[] }> {
   if (items.length === 0) {
     return { validItems: items, removedNames: [] };
@@ -12,7 +18,7 @@ async function filterValidCartItems(items: CartItem[]): Promise<{ validItems: Ca
   const productIds = [...new Set(items.map(item => item.product.id))];
   const { data: products, error } = await supabase
     .from('products')
-    .select('id, available')
+    .select('id, available, stock_quantity')
     .in('id', productIds);
 
   if (error) {
@@ -20,21 +26,28 @@ async function filterValidCartItems(items: CartItem[]): Promise<{ validItems: Ca
     return { validItems: items, removedNames: [] };
   }
 
-  const availableProductIds = new Set((products || []).filter(p => p.available).map(p => p.id));
+  const listedProductIds = new Set((products || []).filter(p => p.available).map(p => p.id));
+  const sellableProductIds = new Set(
+    (products || [])
+      .filter(p => p.available && (p.stock_quantity ?? 0) > 0)
+      .map(p => p.id)
+  );
 
   const variationIds = items.filter(item => item.variation).map(item => item.variation!.id);
-  let existingVariationIds = new Set<string>();
+  // Variation id -> live stock. A variation missing from this map was deleted.
+  let variationStock = new Map<string, number>();
+  let variationLookupFailed = false;
   if (variationIds.length > 0) {
     const { data: variations, error: variationError } = await supabase
       .from('product_variations')
-      .select('id')
+      .select('id, stock_quantity')
       .in('id', variationIds);
 
     if (variationError) {
       console.error('Error validating cart variations:', variationError);
-      existingVariationIds = new Set(variationIds);
+      variationLookupFailed = true;
     } else {
-      existingVariationIds = new Set((variations || []).map(v => v.id));
+      variationStock = new Map((variations || []).map(v => [v.id, v.stock_quantity ?? 0]));
     }
   }
 
@@ -42,10 +55,21 @@ async function filterValidCartItems(items: CartItem[]): Promise<{ validItems: Ca
   const removedNames: string[] = [];
 
   for (const item of items) {
-    const productValid = availableProductIds.has(item.product.id);
-    const variationValid = !item.variation || existingVariationIds.has(item.variation.id);
+    let isSellable: boolean;
 
-    if (productValid && variationValid) {
+    if (item.variation) {
+      // A size was chosen, so that size's stock decides. The parent
+      // `products.stock_quantity` column is stale for products with variations,
+      // so the product only has to still be listed.
+      isSellable = variationLookupFailed
+        ? listedProductIds.has(item.product.id)
+        : listedProductIds.has(item.product.id) &&
+          (variationStock.get(item.variation.id) ?? 0) > 0;
+    } else {
+      isSellable = sellableProductIds.has(item.product.id);
+    }
+
+    if (isSellable) {
       validItems.push(item);
     } else {
       removedNames.push(`${item.product.name}${item.variation ? ` (${item.variation.name})` : ''}`);
