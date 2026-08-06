@@ -107,15 +107,28 @@ Object.assign(navigator, {
     clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
 });
 vi.spyOn(window, 'open').mockImplementation(() => null);
-vi.spyOn(window, 'alert').mockImplementation(() => {});
+vi.spyOn(window, 'alert').mockImplementation(() => { });
 
-describe('Checkout - Place Order Flow', () => {
+describe('Checkout - Single Page Order Flow', () => {
     const cartItems = [mockCartItem, mockCartItemNoVariation];
     const totalPrice = mockCartItem.variation!.price * mockCartItem.quantity + 1800; // 1500*2 + 1800 (discounted TB-500)
     const onBack = vi.fn();
+    const validateCart = vi.fn().mockResolvedValue([]);
+
+    const renderCheckout = () =>
+        render(
+            <Checkout
+                cartItems={cartItems}
+                totalPrice={totalPrice}
+                onBack={onBack}
+                validateCart={validateCart}
+            />
+        );
 
     beforeEach(() => {
         vi.clearAllMocks();
+        validateCart.mockResolvedValue([]);
+        mockUploadImage.mockResolvedValue('https://example.com/proof.png');
         mockSingle.mockResolvedValue({
             data: { id: 'order-1', order_number: 'ORZ-1234' },
             error: null,
@@ -124,101 +137,102 @@ describe('Checkout - Place Order Flow', () => {
 
     const fillDetailsForm = async (user: ReturnType<typeof userEvent.setup>) => {
         await user.type(screen.getByPlaceholderText('Juan Dela Cruz'), 'Test User');
-        await user.type(screen.getByPlaceholderText('juan@example.com'), 'test@example.com');
+        await user.type(screen.getByPlaceholderText('e.g. Juan Dela Cruz'), 'Test FB Name');
         await user.type(screen.getByPlaceholderText('09XX XXX XXXX'), '09171234567');
         await user.type(screen.getByPlaceholderText('House/Unit, Street Name'), '123 Main St');
         await user.type(screen.getByPlaceholderText('Brgy. Name'), 'Brgy. Test');
         await user.type(screen.getByPlaceholderText('City'), 'Manila');
         await user.type(screen.getByPlaceholderText('Province'), 'Metro Manila');
         await user.type(screen.getByPlaceholderText('ZIP Code'), '1000');
+        await user.click(screen.getByText('LBC Express'));
+        await user.click(screen.getByText('LBC - Metro Manila'));
     };
 
-    it('renders the details step initially', () => {
-        render(<Checkout cartItems={cartItems} totalPrice={totalPrice} onBack={onBack} />);
-        expect(screen.getByText('Checkout Information')).toBeInTheDocument();
+    const uploadProof = async (user: ReturnType<typeof userEvent.setup>) => {
+        const file = new File(['proof-image'], 'proof.png', { type: 'image/png' });
+        const fileInput = document.getElementById('payment-proof-upload') as HTMLInputElement;
+        await user.upload(fileInput, file);
+        return file;
+    };
+
+    it('renders customer, shipping and payment sections together on one page', () => {
+        renderCheckout();
+
         expect(screen.getByText('Customer Details')).toBeInTheDocument();
         expect(screen.getByText('Shipping Address')).toBeInTheDocument();
-    });
-
-    it('disables Proceed to Payment when form is incomplete', () => {
-        render(<Checkout cartItems={cartItems} totalPrice={totalPrice} onBack={onBack} />);
-        const proceedBtn = screen.getByText('Proceed to Payment');
-        expect(proceedBtn).toBeDisabled();
-    });
-
-    it('enables Proceed to Payment when all details are filled', async () => {
-        const user = userEvent.setup();
-        render(<Checkout cartItems={cartItems} totalPrice={totalPrice} onBack={onBack} />);
-
-        await fillDetailsForm(user);
-
-        // Select courier
-        await user.click(screen.getByText('LBC Express'));
-
-        // Select shipping location
-        await user.click(screen.getByText('LBC - Metro Manila'));
-
-        const proceedBtn = screen.getByText('Proceed to Payment');
-        expect(proceedBtn).not.toBeDisabled();
-    });
-
-    it('navigates to payment step when Proceed is clicked', async () => {
-        const user = userEvent.setup();
-        render(<Checkout cartItems={cartItems} totalPrice={totalPrice} onBack={onBack} />);
-
-        await fillDetailsForm(user);
-        await user.click(screen.getByText('LBC Express'));
-        await user.click(screen.getByText('LBC - Metro Manila'));
-        await user.click(screen.getByText('Proceed to Payment'));
-
-        expect(screen.getByText('Payment & Verification')).toBeInTheDocument();
+        expect(screen.getByText(/Select Courier Provider/)).toBeInTheDocument();
         expect(screen.getByText('Select Payment Method')).toBeInTheDocument();
         expect(screen.getByText('Upload Proof of Payment')).toBeInTheDocument();
     });
 
-    it('shows Complete Order button disabled until payment proof is uploaded', async () => {
-        const user = userEvent.setup();
-        render(<Checkout cartItems={cartItems} totalPrice={totalPrice} onBack={onBack} />);
+    it('does not render multi-step navigation controls', () => {
+        renderCheckout();
 
-        await fillDetailsForm(user);
-        await user.click(screen.getByText('LBC Express'));
-        await user.click(screen.getByText('LBC - Metro Manila'));
-        await user.click(screen.getByText('Proceed to Payment'));
-
-        const completeBtn = screen.getByText('Complete Order');
-        expect(completeBtn).toBeDisabled();
+        expect(screen.queryByText('Proceed to Payment')).not.toBeInTheDocument();
+        expect(screen.queryByText('Back to Details')).not.toBeInTheDocument();
+        expect(screen.queryByText('Payment & Verification')).not.toBeInTheDocument();
     });
 
-    it('completes the full place order flow successfully', async () => {
+    it('shows a single Complete Order button as the only submit action', () => {
+        renderCheckout();
+
+        expect(screen.getAllByRole('button', { name: /complete order/i })).toHaveLength(1);
+    });
+
+    it('disables Complete Order when customer details are incomplete', async () => {
         const user = userEvent.setup();
-        render(<Checkout cartItems={cartItems} totalPrice={totalPrice} onBack={onBack} />);
+        renderCheckout();
 
-        // Step 1: Fill details
+        await uploadProof(user);
+
+        expect(screen.getByRole('button', { name: /complete order/i })).toBeDisabled();
+    });
+
+    it('disables Complete Order when payment proof is missing', async () => {
+        const user = userEvent.setup();
+        renderCheckout();
+
         await fillDetailsForm(user);
-        await user.click(screen.getByText('LBC Express'));
-        await user.click(screen.getByText('LBC - Metro Manila'));
-        await user.click(screen.getByText('Proceed to Payment'));
 
-        // Step 2: Upload payment proof
-        const file = new File(['proof-image'], 'proof.png', { type: 'image/png' });
-        const fileInput = document.getElementById('payment-proof-upload') as HTMLInputElement;
-        await user.upload(fileInput, file);
+        expect(screen.getByRole('button', { name: /complete order/i })).toBeDisabled();
+    });
 
-        // Verify file name shown
+    it('enables Complete Order once details and payment proof are provided', async () => {
+        const user = userEvent.setup();
+        renderCheckout();
+
+        await fillDetailsForm(user);
+        await uploadProof(user);
+
+        expect(screen.getByRole('button', { name: /complete order/i })).not.toBeDisabled();
+    });
+
+    it('includes the shipping fee in the order total on the same page', async () => {
+        const user = userEvent.setup();
+        renderCheckout();
+
+        await fillDetailsForm(user);
+
+        // Subtotal 4800 + shipping 150 = 4950, shown without leaving the page
+        expect(screen.getByText('₱4,950')).toBeInTheDocument();
+    });
+
+    it('places the order from the single page and shows the confirmation', async () => {
+        const user = userEvent.setup();
+        renderCheckout();
+
+        await fillDetailsForm(user);
+        const file = await uploadProof(user);
         expect(screen.getByText('proof.png')).toBeInTheDocument();
 
-        // Step 3: Click Complete Order
-        const completeBtn = screen.getByText('Complete Order');
-        expect(completeBtn).not.toBeDisabled();
-        await user.click(completeBtn);
+        await user.click(screen.getByRole('button', { name: /complete order/i }));
 
-        // Verify order was saved to database
         await waitFor(() => {
             expect(mockUploadImage).toHaveBeenCalledWith(file);
             expect(mockInsert).toHaveBeenCalledWith([
                 expect.objectContaining({
                     customer_name: 'Test User',
-                    customer_email: 'test@example.com',
+                    customer_email: 'Test FB Name',
                     customer_phone: '09171234567',
                     shipping_address: '123 Main St',
                     shipping_barangay: 'Brgy. Test',
@@ -228,81 +242,47 @@ describe('Checkout - Place Order Flow', () => {
                     order_status: 'new',
                     payment_status: 'pending',
                     payment_proof_url: 'https://example.com/proof.png',
-                    contact_method: 'viber',
                     shipping_fee: 150,
+                    courier_id: 'courier-1',
                     payment_method_id: 'pm-1',
                     payment_method_name: 'GCash',
                 }),
             ]);
         });
 
-        // Verify confirmation step is shown
-        await waitFor(() => {
-            expect(screen.getByText('Order Confirmed')).toBeInTheDocument();
-        });
+        expect(await screen.findByText('Order Confirmed')).toBeInTheDocument();
     });
 
-    it('shows alert when payment proof is missing and order is attempted', async () => {
-        const user = userEvent.setup();
-        render(<Checkout cartItems={cartItems} totalPrice={totalPrice} onBack={onBack} />);
-
-        await fillDetailsForm(user);
-        await user.click(screen.getByText('LBC Express'));
-        await user.click(screen.getByText('LBC - Metro Manila'));
-        await user.click(screen.getByText('Proceed to Payment'));
-
-        // The button should be disabled, but let's verify the handlePlaceOrder guard too
-        // by checking the button is disabled
-        const completeBtn = screen.getByText('Complete Order');
-        expect(completeBtn).toBeDisabled();
-    });
-
-    it('shows error alert when order insert fails', async () => {
+    it('shows an error and stays on the page when the order insert fails', async () => {
         mockSingle.mockResolvedValue({
             data: null,
             error: { message: 'Database error', code: '500', details: null, hint: null },
         });
 
         const user = userEvent.setup();
-        render(<Checkout cartItems={cartItems} totalPrice={totalPrice} onBack={onBack} />);
+        renderCheckout();
 
         await fillDetailsForm(user);
-        await user.click(screen.getByText('LBC Express'));
-        await user.click(screen.getByText('LBC - Metro Manila'));
-        await user.click(screen.getByText('Proceed to Payment'));
-
-        const file = new File(['proof-image'], 'proof.png', { type: 'image/png' });
-        const fileInput = document.getElementById('payment-proof-upload') as HTMLInputElement;
-        await user.upload(fileInput, file);
-
-        await user.click(screen.getByText('Complete Order'));
+        await uploadProof(user);
+        await user.click(screen.getByRole('button', { name: /complete order/i }));
 
         await waitFor(() => {
-            expect(window.alert).toHaveBeenCalledWith(
-                expect.stringContaining('Failed to save order')
-            );
+            expect(window.alert).toHaveBeenCalledWith(expect.stringContaining('Failed to save order'));
         });
 
-        // Should NOT navigate to confirmation
         expect(screen.queryByText('Order Confirmed')).not.toBeInTheDocument();
+        expect(screen.getByText('Customer Details')).toBeInTheDocument();
     });
 
-    it('shows error alert when image upload fails', async () => {
+    it('shows an error and stays on the page when the proof upload fails', async () => {
         mockUploadImage.mockRejectedValueOnce(new Error('Upload failed'));
 
         const user = userEvent.setup();
-        render(<Checkout cartItems={cartItems} totalPrice={totalPrice} onBack={onBack} />);
+        renderCheckout();
 
         await fillDetailsForm(user);
-        await user.click(screen.getByText('LBC Express'));
-        await user.click(screen.getByText('LBC - Metro Manila'));
-        await user.click(screen.getByText('Proceed to Payment'));
-
-        const file = new File(['proof-image'], 'proof.png', { type: 'image/png' });
-        const fileInput = document.getElementById('payment-proof-upload') as HTMLInputElement;
-        await user.upload(fileInput, file);
-
-        await user.click(screen.getByText('Complete Order'));
+        await uploadProof(user);
+        await user.click(screen.getByRole('button', { name: /complete order/i }));
 
         await waitFor(() => {
             expect(window.alert).toHaveBeenCalledWith(
@@ -313,46 +293,24 @@ describe('Checkout - Place Order Flow', () => {
         expect(screen.queryByText('Order Confirmed')).not.toBeInTheDocument();
     });
 
-    it('can navigate back to details from payment step', async () => {
+    it('returns to the cart when Back to Cart is clicked', async () => {
         const user = userEvent.setup();
-        render(<Checkout cartItems={cartItems} totalPrice={totalPrice} onBack={onBack} />);
-
-        await fillDetailsForm(user);
-        await user.click(screen.getByText('LBC Express'));
-        await user.click(screen.getByText('LBC - Metro Manila'));
-        await user.click(screen.getByText('Proceed to Payment'));
-
-        expect(screen.getByText('Payment & Verification')).toBeInTheDocument();
-
-        await user.click(screen.getByText('Back to Details'));
-
-        expect(screen.getByText('Checkout Information')).toBeInTheDocument();
-    });
-
-    it('calls onBack when Back to Cart is clicked', async () => {
-        const user = userEvent.setup();
-        render(<Checkout cartItems={cartItems} totalPrice={totalPrice} onBack={onBack} />);
+        renderCheckout();
 
         await user.click(screen.getByText('Back to Cart'));
         expect(onBack).toHaveBeenCalled();
     });
 
-    it('displays order summary with correct items and prices', () => {
-        render(<Checkout cartItems={cartItems} totalPrice={totalPrice} onBack={onBack} />);
+    it('displays the order summary with cart items', () => {
+        renderCheckout();
 
         expect(screen.getByText('Order Summary')).toBeInTheDocument();
         expect(screen.getByText(/BPC-157/)).toBeInTheDocument();
         expect(screen.getByText(/TB-500/)).toBeInTheDocument();
     });
 
-    it('selects GCash payment method by default', async () => {
-        const user = userEvent.setup();
-        render(<Checkout cartItems={cartItems} totalPrice={totalPrice} onBack={onBack} />);
-
-        await fillDetailsForm(user);
-        await user.click(screen.getByText('LBC Express'));
-        await user.click(screen.getByText('LBC - Metro Manila'));
-        await user.click(screen.getByText('Proceed to Payment'));
+    it('preselects the first payment method without any step navigation', () => {
+        renderCheckout();
 
         expect(screen.getByText('GCash')).toBeInTheDocument();
         const radio = screen.getByRole('radio') as HTMLInputElement;
