@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ShoppingCart, Package } from 'lucide-react';
 import type { Product, ProductVariation } from '../types';
 import { ikImage } from '../utils/imagekit';
+import { isVisibleOnStorefront } from '../utils/inventory';
 
 interface MenuItemCardProps {
   product: Product;
@@ -27,11 +28,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({
   const originalPrice = product.base_price;
   const discountPct = hasDiscount ? Math.round((1 - currentPrice / originalPrice) * 100) : 0;
 
-  const hasAnyStock = product.variations && product.variations.length > 0
-    ? product.variations.some(v => v.stock_quantity > 0)
-    : product.stock_quantity > 0;
-
-  const isAvailable = product.available && hasAnyStock;
+  const isAvailable = isVisibleOnStorefront(product);
 
   return (
     <div

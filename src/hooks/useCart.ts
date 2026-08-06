@@ -2,6 +2,19 @@ import { useState, useEffect } from 'react';
 import type { CartItem, Product, ProductVariation } from '../types';
 import { supabase } from '../lib/supabase';
 
+/** The `products` columns cart revalidation reads. */
+interface ProductStockRow {
+  id: string;
+  available: boolean;
+  stock_quantity: number | null;
+}
+
+/** The `product_variations` columns cart revalidation reads. */
+interface VariationStockRow {
+  id: string;
+  stock_quantity: number | null;
+}
+
 // Checks cart items against the database and drops products that have been
 // deleted, marked unavailable, or sold out (and items whose variation no longer
 // exists or has run out). Stock is re-read live because the product snapshot
@@ -26,9 +39,13 @@ async function filterValidCartItems(items: CartItem[]): Promise<{ validItems: Ca
     return { validItems: items, removedNames: [] };
   }
 
-  const listedProductIds = new Set((products || []).filter(p => p.available).map(p => p.id));
+  // The generated Database type does not declare these tables, so PostgREST
+  // infers `never` for the rows. Narrow to the columns we actually selected.
+  const productRows = (products ?? []) as unknown as ProductStockRow[];
+
+  const listedProductIds = new Set(productRows.filter(p => p.available).map(p => p.id));
   const sellableProductIds = new Set(
-    (products || [])
+    productRows
       .filter(p => p.available && (p.stock_quantity ?? 0) > 0)
       .map(p => p.id)
   );
@@ -47,7 +64,8 @@ async function filterValidCartItems(items: CartItem[]): Promise<{ validItems: Ca
       console.error('Error validating cart variations:', variationError);
       variationLookupFailed = true;
     } else {
-      variationStock = new Map((variations || []).map(v => [v.id, v.stock_quantity ?? 0]));
+      const variationRows = (variations ?? []) as unknown as VariationStockRow[];
+      variationStock = new Map(variationRows.map(v => [v.id, v.stock_quantity ?? 0]));
     }
   }
 

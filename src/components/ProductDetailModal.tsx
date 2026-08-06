@@ -4,6 +4,7 @@ import { X, Package, ShoppingCart, Plus, Minus, FlaskConical, Thermometer, Weigh
 import type { Product, ProductVariation } from '../types';
 import { useReviews } from '../hooks/useReviews';
 import { ikImage } from '../utils/imagekit';
+import { hasSellableStock, isVisibleOnStorefront } from '../utils/inventory';
 
 interface ProductDetailModalProps {
   product: Product;
@@ -66,12 +67,10 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, onClos
 
   const discountPct = hasDiscount ? Math.round((1 - currentPrice / originalPrice) * 100) : 0;
 
-  const hasAnyStock = product.variations && product.variations.length > 0
-    ? product.variations.some(v => v.stock_quantity > 0)
-    : product.stock_quantity > 0;
+  const hasAnyStock = hasSellableStock(product);
 
   const selectedOos = selectedVariation ? selectedVariation.stock_quantity === 0 : false;
-  const isAvailable = product.available && hasAnyStock && !selectedOos;
+  const isAvailable = isVisibleOnStorefront(product) && !selectedOos;
 
   const handleAddToCart = () => {
     if (!isAvailable) return;
