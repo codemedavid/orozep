@@ -36,6 +36,30 @@ export const mockVariationOutOfStock: ProductVariation = {
   created_at: '2024-01-01T00:00:00Z',
 };
 
+export const mockVariationSoldOutSmall: ProductVariation = {
+  id: 'var-4',
+  product_id: 'prod-5',
+  name: '5mg',
+  quantity_mg: 5,
+  price: 1200,
+  discount_price: null,
+  discount_active: false,
+  stock_quantity: 0,
+  created_at: '2024-01-01T00:00:00Z',
+};
+
+export const mockVariationSoldOutLarge: ProductVariation = {
+  id: 'var-5',
+  product_id: 'prod-5',
+  name: '10mg',
+  quantity_mg: 10,
+  price: 2200,
+  discount_price: null,
+  discount_active: false,
+  stock_quantity: 0,
+  created_at: '2024-01-01T00:00:00Z',
+};
+
 export const mockProduct: Product = {
   id: 'prod-1',
   name: 'BPC-157',
@@ -120,6 +144,17 @@ export const mockProductUnavailable: Product = {
   name: 'Melanotan II',
   available: false,
   stock_quantity: 5,
+};
+
+// Every size is sold out. `stock_quantity` on the parent row is deliberately
+// left positive: when a product has variations, the variations are the source
+// of truth for sellable stock and the legacy parent column is often stale.
+export const mockProductAllVariationsOutOfStock: Product = {
+  ...mockProductOutOfStock,
+  id: 'prod-5',
+  name: 'Semaglutide',
+  stock_quantity: 12,
+  variations: [mockVariationSoldOutSmall, mockVariationSoldOutLarge],
 };
 
 export const mockCartItem: CartItem = {
