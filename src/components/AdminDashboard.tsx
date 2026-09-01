@@ -20,6 +20,8 @@ import CourierManager from './CourierManager';
 import ProtocolManager from './ProtocolManager';
 import ReviewsManager from './ReviewsManager';
 import RecycleBinManager from './RecycleBinManager';
+import ConfirmDeleteDialog from './ConfirmDeleteDialog';
+import { useConfirmDelete } from '../hooks/useConfirmDelete';
 // GuideManager removed (Peptalk functionality disabled)
 
 const AdminDashboard: React.FC = () => {
@@ -30,6 +32,7 @@ const AdminDashboard: React.FC = () => {
   const [loginError, setLoginError] = useState('');
   const { products, loading, addProduct, updateProduct, deleteProduct, refreshProducts } = useMenu({ realtime: true });
   const { categories } = useCategories();
+  const { confirmDelete, confirmDialogProps } = useConfirmDelete();
   const [currentView, setCurrentView] = useState<'dashboard' | 'products' | 'add' | 'edit' | 'categories' | 'payments' | 'inventory' | 'orders' | 'shipping' | 'coa' | 'faq' | 'settings' | 'promo-codes' | 'couriers' | 'protocols' | 'reviews' | 'recycle-bin'>('dashboard');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -107,7 +110,15 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handleDeleteProduct = async (id: string) => {
-    if (confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+    const target = products.find((product) => product.id === id);
+
+    if (
+      await confirmDelete({
+        itemName: target?.name ?? 'this product',
+        title: 'Delete this product?',
+        description: 'It moves to Recently Deleted and can be restored for 30 days.',
+      })
+    ) {
       setManagingVariationsProductId(null);
       try {
         setIsProcessing(true);
@@ -129,7 +140,13 @@ const AdminDashboard: React.FC = () => {
       return;
     }
 
-    if (confirm(`Are you sure you want to delete ${selectedProducts.size} product(s)? This action cannot be undone.`)) {
+    if (
+      await confirmDelete({
+        itemName: `delete ${selectedProducts.size} products`,
+        title: `Delete ${selectedProducts.size} product(s)?`,
+        description: 'They move to Recently Deleted and can be restored for 30 days.',
+      })
+    ) {
       try {
         setIsProcessing(true);
         let successCount = 0;
@@ -1212,6 +1229,8 @@ const AdminDashboard: React.FC = () => {
             </div>
           </div>
         </div>
+
+        <ConfirmDeleteDialog {...confirmDialogProps} />
       </>
     );
   }

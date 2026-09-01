@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Package, CheckCircle, XCircle, Clock, Truck, AlertCircle, Search, RefreshCw, Eye, MessageCircle, Image as ImageIcon, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useConfirmDelete } from '../hooks/useConfirmDelete';
+import ConfirmDeleteDialog from './ConfirmDeleteDialog';
 import { useMenu } from '../hooks/useMenu';
 import { useCouriers } from '../hooks/useCouriers';
 import { useOrders, ORDERS_PAGE_SIZE, type Order } from '../hooks/useOrders';
@@ -31,6 +33,7 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
+  const { confirmDelete, confirmDialogProps } = useConfirmDelete();
   const { refreshProducts } = useMenu();
 
   // Clear the selection whenever the visible page of orders changes so we
@@ -67,7 +70,14 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
 
   const handleDeleteSelected = async () => {
     if (selectedOrderIds.size === 0) return;
-    if (!confirm(`Are you sure you want to permanently delete ${selectedOrderIds.size} selected order(s)? This action cannot be undone.`)) return;
+    const selectedCount = selectedOrderIds.size;
+    const confirmed = await confirmDelete({
+      itemName: `delete ${selectedCount} orders`,
+      title: `Permanently delete ${selectedCount} order(s)?`,
+      // Orders are not soft-deleted yet, so this really is irreversible.
+      description: 'Orders have no Recently Deleted bin. This cannot be undone.',
+    });
+    if (!confirmed) return;
 
     try {
       setIsProcessing(true);
@@ -91,8 +101,14 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
 
   const handleDeleteAllOrders = async () => {
     if (totalCount === 0) return;
-    if (!confirm(`Are you sure you want to permanently delete ALL ${totalCount} orders? This action cannot be undone.`)) return;
-    if (!confirm(`FINAL WARNING: This will delete every order in the system. Type confirm to proceed.`)) return;
+    const confirmed = await confirmDelete({
+      itemName: 'DELETE ALL ORDERS',
+      title: `Permanently delete ALL ${totalCount} orders?`,
+      description:
+        'Every order in the system, including customer details and payment proofs. Orders have no Recently Deleted bin — this cannot be undone.',
+      confirmLabel: 'Delete',
+    });
+    if (!confirmed) return;
 
     try {
       setIsProcessing(true);
@@ -581,6 +597,7 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
           </div>
         )}
       </div>
+      <ConfirmDeleteDialog {...confirmDialogProps} />
     </div>
   );
 };
@@ -1023,6 +1040,7 @@ const OrderDetailsView: React.FC<OrderDetailsViewProps> = ({
           )}
         </div>
       </div>
+
     </div>
   );
 };

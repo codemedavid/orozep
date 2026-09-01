@@ -4,6 +4,8 @@ import type { Product } from '../types';
 import { useMenu } from '../hooks/useMenu';
 import { useCategories } from '../hooks/useCategories';
 import { supabase } from '../lib/supabase';
+import { useConfirmDelete } from '../hooks/useConfirmDelete';
+import ConfirmDeleteDialog from './ConfirmDeleteDialog';
 
 interface PeptideInventoryManagerProps {
   onBack: () => void;
@@ -12,6 +14,7 @@ interface PeptideInventoryManagerProps {
 const PeptideInventoryManager: React.FC<PeptideInventoryManagerProps> = ({ onBack }) => {
   const { products, loading, refreshProducts, deleteProduct, deleteVariation } = useMenu({ realtime: true });
   const { categories } = useCategories();
+  const { confirmDelete, confirmDialogProps } = useConfirmDelete();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
@@ -185,11 +188,17 @@ const PeptideInventoryManager: React.FC<PeptideInventoryManagerProps> = ({ onBac
   };
 
   const handleDeleteProduct = async (productId: string, productName: string) => {
-    if (confirm(`Are you sure you want to delete "${productName}"? This action cannot be undone.`)) {
+    if (
+      await confirmDelete({
+        itemName: productName,
+        title: 'Delete this product?',
+        description: 'It moves to Recently Deleted and can be restored for 30 days.',
+      })
+    ) {
       try {
         const result = await deleteProduct(productId);
         if (result.success) {
-          alert('Product deleted successfully!');
+          alert('Product moved to Recently Deleted.');
           await refreshProducts();
         } else {
           alert(result.error || 'Failed to delete product');
@@ -202,11 +211,17 @@ const PeptideInventoryManager: React.FC<PeptideInventoryManagerProps> = ({ onBac
   };
 
   const handleDeleteVariation = async (variationId: string, variationName: string) => {
-    if (confirm(`Are you sure you want to delete "${variationName}"? This action cannot be undone.`)) {
+    if (
+      await confirmDelete({
+        itemName: variationName,
+        title: 'Delete this size?',
+        description: 'It moves to Recently Deleted with its stock and can be restored for 30 days.',
+      })
+    ) {
       try {
         const result = await deleteVariation(variationId);
         if (result.success) {
-          alert('Variation deleted successfully!');
+          alert('Size moved to Recently Deleted.');
           await refreshProducts();
         } else {
           alert(result.error || 'Failed to delete variation');
@@ -360,6 +375,7 @@ const PeptideInventoryManager: React.FC<PeptideInventoryManagerProps> = ({ onBac
           )}
         </div>
       </div>
+      <ConfirmDeleteDialog {...confirmDialogProps} />
     </div>
   );
 };
@@ -593,6 +609,7 @@ const InventoryItemCard: React.FC<InventoryItemCardProps> = ({ product, categori
           )}
         </div>
       </div>
+
     </div>
   );
 };

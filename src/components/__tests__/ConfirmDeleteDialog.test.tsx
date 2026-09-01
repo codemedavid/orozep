@@ -6,8 +6,8 @@ import ConfirmDeleteDialog from '../ConfirmDeleteDialog';
 
 const ITEM = 'Retatrutide 10mg';
 
-let onConfirm: ReturnType<typeof vi.fn>;
-let onCancel: ReturnType<typeof vi.fn>;
+let onConfirm: ReturnType<typeof vi.fn<() => void>>;
+let onCancel: ReturnType<typeof vi.fn<() => void>>;
 
 function renderDialog(overrides: Record<string, unknown> = {}) {
   return render(
@@ -28,8 +28,8 @@ function confirmButton() {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  onConfirm = vi.fn();
-  onCancel = vi.fn();
+  onConfirm = vi.fn<() => void>();
+  onCancel = vi.fn<() => void>();
 });
 
 describe('ConfirmDeleteDialog', () => {
@@ -143,7 +143,8 @@ describe('ConfirmDeleteDialog', () => {
 
     await user.type(screen.getByRole('textbox'), ITEM);
 
-    expect(confirmButton()).toBeDisabled();
+    // The control reports progress and stays inert even on a matching name.
+    expect(screen.getByRole('button', { name: /deleting/i })).toBeDisabled();
   });
 
   it('is an accessible modal dialog with a name', () => {
