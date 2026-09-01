@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { Home, Layout } from 'lucide-react';
 import { useSiteSettings } from '../hooks/useSiteSettings';
 import { useImageUpload } from '../hooks/useImageUpload';
+import { useConfirmDelete } from '../hooks/useConfirmDelete';
+import ConfirmDeleteDialog from './ConfirmDeleteDialog';
 
 const SiteSettingsManager: React.FC = () => {
+  const { confirmDelete, confirmDialogProps } = useConfirmDelete();
   const { siteSettings, loading, updateSiteSettings } = useSiteSettings();
   const { uploadImage, uploading } = useImageUpload();
 
@@ -93,8 +96,13 @@ const SiteSettingsManager: React.FC = () => {
     }
   };
 
-  const handleResetDefaults = () => {
-    if (confirm('Are you sure you want to reset the homepage content to defaults?')) {
+  const handleResetDefaults = async () => {
+    if (await confirmDelete({
+        itemName: 'reset homepage',
+        title: 'Reset homepage content?',
+        description: 'All homepage wording returns to the built-in defaults. Your current text is not recoverable.',
+        confirmLabel: 'Reset',
+      })) {
       setFormData(prev => ({
         ...prev,
         hero_badge_text: 'Premium Pink Peptide Essentials',
@@ -300,6 +308,7 @@ const SiteSettingsManager: React.FC = () => {
           </div>
         </div>
       </div>
+      <ConfirmDeleteDialog {...confirmDialogProps} />
     </div>
   );
 };

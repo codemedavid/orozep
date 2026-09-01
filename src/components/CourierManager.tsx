@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Save, X, ArrowLeft, Truck, Link } from 'lucide-react';
 import { useCouriers, Courier } from '../hooks/useCouriers';
+import { useConfirmDelete } from '../hooks/useConfirmDelete';
+import ConfirmDeleteDialog from './ConfirmDeleteDialog';
 
 interface CourierManagerProps {
     onBack: () => void;
 }
 
 const CourierManager: React.FC<CourierManagerProps> = ({ onBack }) => {
+  const { confirmDelete, confirmDialogProps } = useConfirmDelete();
     const { couriers, loading, addCourier, updateCourier, deleteCourier } = useCouriers();
     const [currentView, setCurrentView] = useState<'list' | 'add' | 'edit'>('list');
     const [editingCourier, setEditingCourier] = useState<Courier | null>(null);
@@ -43,8 +46,12 @@ const CourierManager: React.FC<CourierManagerProps> = ({ onBack }) => {
         setCurrentView('edit');
     };
 
-    const handleDeleteCourier = async (id: string) => {
-        if (confirm('Are you sure you want to delete this courier?')) {
+    const handleDeleteCourier = async (id: string, courierName: string) => {
+        if (await confirmDelete({
+        itemName: courierName,
+        title: 'Delete this courier?',
+        description: 'This cannot be undone.',
+      })) {
             try {
                 setIsProcessing(true);
                 await deleteCourier(id);
@@ -311,7 +318,7 @@ const CourierManager: React.FC<CourierManagerProps> = ({ onBack }) => {
                                             </button>
 
                                             <button
-                                                onClick={() => handleDeleteCourier(courier.id)}
+                                                onClick={() => handleDeleteCourier(courier.id, courier.name)}
                                                 disabled={isProcessing}
                                                 className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 border border-red-300/30 disabled:opacity-50"
                                                 aria-label="Delete"
@@ -339,6 +346,7 @@ const CourierManager: React.FC<CourierManagerProps> = ({ onBack }) => {
                     </ul>
                 </div>
             </div>
+          <ConfirmDeleteDialog {...confirmDialogProps} />
         </div>
     );
 };

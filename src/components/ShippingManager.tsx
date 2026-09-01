@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { MapPin, Edit2, Save, X, Plus, Trash2, AlertCircle } from 'lucide-react';
 import { useShippingLocationsAdmin, ShippingLocation } from '../hooks/useShippingLocations';
+import { useConfirmDelete } from '../hooks/useConfirmDelete';
+import ConfirmDeleteDialog from './ConfirmDeleteDialog';
 
 interface ShippingManagerProps {
     onBack: () => void;
 }
 
 const ShippingManager: React.FC<ShippingManagerProps> = ({ onBack }) => {
+  const { confirmDelete, confirmDialogProps } = useConfirmDelete();
     const { locations, loading, error, updateLocation, addLocation, deleteLocation, refetch } = useShippingLocationsAdmin();
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editFee, setEditFee] = useState<number>(0);
@@ -52,8 +55,12 @@ const ShippingManager: React.FC<ShippingManagerProps> = ({ onBack }) => {
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (window.confirm('Are you sure you want to delete this shipping location?')) {
+    const handleDelete = async (id: string, locationName: string) => {
+        if (await confirmDelete({
+        itemName: locationName,
+        title: 'Delete this shipping location?',
+        description: 'This cannot be undone.',
+      })) {
             try {
                 await deleteLocation(id);
             } catch (err) {
@@ -265,7 +272,7 @@ const ShippingManager: React.FC<ShippingManagerProps> = ({ onBack }) => {
                                                 <Edit2 className="w-4 h-4" />
                                             </button>
                                             <button
-                                                onClick={() => handleDelete(location.id)}
+                                                onClick={() => handleDelete(location.id, location.name)}
                                                 className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
                                             >
                                                 <Trash2 className="w-4 h-4" />
@@ -288,6 +295,7 @@ const ShippingManager: React.FC<ShippingManagerProps> = ({ onBack }) => {
                     </ul>
                 </div>
             </div>
+          <ConfirmDeleteDialog {...confirmDialogProps} />
         </div>
     );
 };

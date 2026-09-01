@@ -2,12 +2,15 @@ import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Save, X, ArrowLeft, CreditCard, Upload } from 'lucide-react';
 import { usePaymentMethods, PaymentMethod } from '../hooks/usePaymentMethods';
 import ImageUpload from './ImageUpload';
+import { useConfirmDelete } from '../hooks/useConfirmDelete';
+import ConfirmDeleteDialog from './ConfirmDeleteDialog';
 
 interface PaymentMethodManagerProps {
   onBack: () => void;
 }
 
 const PaymentMethodManager: React.FC<PaymentMethodManagerProps> = ({ onBack }) => {
+  const { confirmDelete, confirmDialogProps } = useConfirmDelete();
   const { paymentMethods, addPaymentMethod, updatePaymentMethod, deletePaymentMethod, refetchAll } = usePaymentMethods();
   const [currentView, setCurrentView] = useState<'list' | 'add' | 'edit'>('list');
   const [editingMethod, setEditingMethod] = useState<PaymentMethod | null>(null);
@@ -53,8 +56,12 @@ const PaymentMethodManager: React.FC<PaymentMethodManagerProps> = ({ onBack }) =
     setCurrentView('edit');
   };
 
-  const handleDeleteMethod = async (id: string) => {
-    if (confirm('Are you sure you want to delete this payment method?')) {
+  const handleDeleteMethod = async (id: string, accountName: string) => {
+    if (await confirmDelete({
+        itemName: accountName,
+        title: 'Delete this payment method?',
+        description: 'This cannot be undone.',
+      })) {
       try {
         await deletePaymentMethod(id);
       } catch (error) {
@@ -346,7 +353,7 @@ const PaymentMethodManager: React.FC<PaymentMethodManagerProps> = ({ onBack }) =
                       </button>
 
                       <button
-                        onClick={() => handleDeleteMethod(method.id)}
+                        onClick={() => handleDeleteMethod(method.id, method.account_name)}
                         className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 border border-red-300/30"
                         aria-label="Delete"
                       >
@@ -360,6 +367,7 @@ const PaymentMethodManager: React.FC<PaymentMethodManagerProps> = ({ onBack }) =
           </div>
         </div>
       </div>
+      <ConfirmDeleteDialog {...confirmDialogProps} />
     </div>
   );
 };

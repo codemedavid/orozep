@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Plus, Edit, Trash2, Save, X, Eye, EyeOff } from 'lucide-react';
 import { useProtocols, Protocol } from '../hooks/useProtocols';
+import { useConfirmDelete } from '../hooks/useConfirmDelete';
+import ConfirmDeleteDialog from './ConfirmDeleteDialog';
 
 interface ProtocolManagerProps {
     onBack: () => void;
 }
 
 const ProtocolManager: React.FC<ProtocolManagerProps> = ({ onBack }) => {
+  const { confirmDelete, confirmDialogProps } = useConfirmDelete();
     const { protocols, loading, addProtocol, updateProtocol, deleteProtocol, toggleActive } = useProtocols();
     const [editingId, setEditingId] = useState<string | null>(null);
     const [isAdding, setIsAdding] = useState(false);
@@ -84,8 +87,12 @@ const ProtocolManager: React.FC<ProtocolManagerProps> = ({ onBack }) => {
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this protocol?')) return;
+    const handleDelete = async (id: string, protocolName: string) => {
+        if (!(await confirmDelete({
+        itemName: protocolName,
+        title: 'Delete this protocol?',
+        description: 'This cannot be undone.',
+      }))) return;
         setIsProcessing(true);
         try {
             const result = await deleteProtocol(id);
@@ -311,7 +318,7 @@ const ProtocolManager: React.FC<ProtocolManagerProps> = ({ onBack }) => {
                                             <Edit className="w-4 h-4" />
                                         </button>
                                         <button
-                                            onClick={() => handleDelete(protocol.id)}
+                                            onClick={() => handleDelete(protocol.id, protocol.name)}
                                             disabled={isProcessing}
                                             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                             title="Delete"
@@ -325,6 +332,7 @@ const ProtocolManager: React.FC<ProtocolManagerProps> = ({ onBack }) => {
                     )}
                 </div>
             </div>
+          <ConfirmDeleteDialog {...confirmDialogProps} />
         </div>
     );
 };

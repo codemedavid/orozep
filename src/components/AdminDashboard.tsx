@@ -455,7 +455,15 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handleBulkGenerateProtocols = async () => {
-    if (!confirm(`This will generate/regenerate protocols for ALL ${products.length} products using AI. This may take a while and will consume API credits. Continue?`)) {
+    if (
+      !(await confirmDelete({
+        itemName: 'regenerate all protocols',
+        title: `Regenerate protocols for all ${products.length} products?`,
+        description:
+          'Existing protocols are overwritten and this consumes AI API credits. It cannot be undone.',
+        confirmLabel: 'Regenerate',
+      }))
+    ) {
       return;
     }
 
@@ -1324,6 +1332,8 @@ const AdminDashboard: React.FC = () => {
         </div>
 
         <ProtocolManager onBack={() => setCurrentView('dashboard')} />
+
+        <ConfirmDeleteDialog {...confirmDialogProps} />
       </div>
     );
   }

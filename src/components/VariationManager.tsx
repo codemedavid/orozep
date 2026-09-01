@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Save, X, Package } from 'lucide-react';
 import type { Product, ProductVariation } from '../types';
 import { useMenu } from '../hooks/useMenu';
+import { useConfirmDelete } from '../hooks/useConfirmDelete';
+import ConfirmDeleteDialog from './ConfirmDeleteDialog';
 
 interface VariationManagerProps {
   product: Product;
@@ -10,6 +12,7 @@ interface VariationManagerProps {
 }
 
 const VariationManager: React.FC<VariationManagerProps> = ({ product, onClose, onUpdate }) => {
+  const { confirmDelete, confirmDialogProps } = useConfirmDelete();
   const { addVariation, updateVariation, deleteVariation } = useMenu({ realtime: true });
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -111,7 +114,11 @@ const VariationManager: React.FC<VariationManagerProps> = ({ product, onClose, o
   };
 
   const handleDeleteVariation = async (id: string, name: string) => {
-    if (!confirm(`Delete ${name} variation? This cannot be undone.`)) return;
+    if (!(await confirmDelete({
+        itemName: name,
+        title: 'Delete this size?',
+        description: 'It moves to Recently Deleted with its stock and can be restored for 30 days.',
+      }))) return;
 
     try {
       setIsProcessing(true);
@@ -463,6 +470,7 @@ const VariationManager: React.FC<VariationManagerProps> = ({ product, onClose, o
           </button>
         </div>
       </div>
+      <ConfirmDeleteDialog {...confirmDialogProps} />
     </div>
   );
 };

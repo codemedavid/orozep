@@ -12,6 +12,8 @@ import {
     ArrowLeft
 } from 'lucide-react';
 import ImageUpload from './ImageUpload';
+import { useConfirmDelete } from '../hooks/useConfirmDelete';
+import ConfirmDeleteDialog from './ConfirmDeleteDialog';
 
 interface Article {
     id: string;
@@ -40,6 +42,7 @@ interface ModalData {
 }
 
 export default function GuideManager() {
+  const { confirmDelete, confirmDialogProps } = useConfirmDelete();
     const [articles, setArticles] = useState<Article[]>([]);
     const [showModal, setShowModal] = useState(false);
     const [modalData, setModalData] = useState<ModalData>({
@@ -173,8 +176,12 @@ export default function GuideManager() {
         }
     };
 
-    const deleteArticle = async (articleId: string) => {
-        if (!confirm('Are you sure you want to delete this article?')) {
+    const deleteArticle = async (articleId: string, articleTitle: string) => {
+        if (!(await confirmDelete({
+        itemName: articleTitle,
+        title: 'Delete this article?',
+        description: 'This cannot be undone.',
+      }))) {
             return;
         }
 
@@ -318,7 +325,7 @@ export default function GuideManager() {
                                                 <Edit2 className="w-4 h-4 text-pink-600" />
                                             </button>
                                             <button
-                                                onClick={() => deleteArticle(article.id)}
+                                                onClick={() => deleteArticle(article.id, article.title)}
                                                 className="p-2 hover:bg-red-100 rounded-lg transition-colors"
                                                 title="Delete Article"
                                             >
@@ -488,6 +495,7 @@ export default function GuideManager() {
                     </div>
                 </div>
             )}
+          <ConfirmDeleteDialog {...confirmDialogProps} />
         </div>
     );
 }

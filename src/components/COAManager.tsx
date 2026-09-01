@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Save, X, Shield, ExternalLink, Sparkles, ArrowLeft } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import ImageUpload from './ImageUpload';
+import { useConfirmDelete } from '../hooks/useConfirmDelete';
+import ConfirmDeleteDialog from './ConfirmDeleteDialog';
 
 interface COAManagerProps {
   onBack?: () => void;
@@ -23,6 +25,7 @@ interface COAReport {
 }
 
 const COAManager: React.FC<COAManagerProps> = ({ onBack }) => {
+  const { confirmDelete, confirmDialogProps } = useConfirmDelete();
   const [coaReports, setCOAReports] = useState<COAReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -181,8 +184,12 @@ const COAManager: React.FC<COAManagerProps> = ({ onBack }) => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this COA report?')) return;
+  const handleDelete = async (id: string, reportName: string) => {
+    if (!(await confirmDelete({
+        itemName: reportName,
+        title: 'Delete this COA report?',
+        description: 'This cannot be undone.',
+      }))) return;
 
     try {
       const { error } = await supabase
@@ -538,7 +545,7 @@ const COAManager: React.FC<COAManagerProps> = ({ onBack }) => {
                     <Edit2 className="w-5 h-5" />
                   </button>
                   <button
-                    onClick={() => handleDelete(report.id)}
+                    onClick={() => handleDelete(report.id, report.product_name)}
                     className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-all"
                     title="Delete"
                   >
@@ -550,6 +557,7 @@ const COAManager: React.FC<COAManagerProps> = ({ onBack }) => {
           ))
         )}
       </div>
+      <ConfirmDeleteDialog {...confirmDialogProps} />
     </div>
   );
 };

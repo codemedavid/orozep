@@ -6,12 +6,15 @@ import { useMenu } from '../hooks/useMenu';
 import ImageUpload from './ImageUpload';
 import { ikImage } from '../utils/imagekit';
 import type { ReviewWithProducts } from '../types/review';
+import { useConfirmDelete } from '../hooks/useConfirmDelete';
+import ConfirmDeleteDialog from './ConfirmDeleteDialog';
 
 interface ReviewsManagerProps {
   onBack?: () => void;
 }
 
 const ReviewsManager: React.FC<ReviewsManagerProps> = ({ onBack }) => {
+  const { confirmDelete, confirmDialogProps } = useConfirmDelete();
   const { reviews, loading, addReview, updateReview, deleteReview } = useReviews();
   const { products } = useMenu();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -82,8 +85,14 @@ const ReviewsManager: React.FC<ReviewsManagerProps> = ({ onBack }) => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this review?')) return;
+  const handleDelete = async (id: string, reviewTitle: string | null) => {
+    // Reviews may be untitled; fall back to a phrase the admin can still type.
+    const itemName = reviewTitle?.trim() || 'delete review';
+    if (!(await confirmDelete({
+        itemName,
+        title: 'Delete this review?',
+        description: 'This cannot be undone.',
+      }))) return;
     try {
       await deleteReview(id);
     } catch (err: any) {
@@ -304,7 +313,7 @@ const ReviewsManager: React.FC<ReviewsManagerProps> = ({ onBack }) => {
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => handleDelete(review.id)}
+                      onClick={() => handleDelete(review.id, review.title)}
                       className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -316,6 +325,7 @@ const ReviewsManager: React.FC<ReviewsManagerProps> = ({ onBack }) => {
           </div>
         )}
       </div>
+      <ConfirmDeleteDialog {...confirmDialogProps} />
     </div>
   );
 };

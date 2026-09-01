@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { Plus, Edit2, Trash2, Save, X, ChevronDown, ChevronUp, HelpCircle, ArrowLeft } from 'lucide-react';
 import { useFAQsAdmin, FAQItem } from '../hooks/useFAQs';
+import { useConfirmDelete } from '../hooks/useConfirmDelete';
+import ConfirmDeleteDialog from './ConfirmDeleteDialog';
 
 interface FAQManagerProps {
     onBack?: () => void;
 }
 
 const FAQManager: React.FC<FAQManagerProps> = ({ onBack }) => {
+  const { confirmDelete, confirmDialogProps } = useConfirmDelete();
     const { faqs, loading, addFAQ, updateFAQ, deleteFAQ, refetch } = useFAQsAdmin();
     const [editingId, setEditingId] = useState<string | null>(null);
     const [isAdding, setIsAdding] = useState(false);
@@ -71,8 +74,12 @@ const FAQManager: React.FC<FAQManagerProps> = ({ onBack }) => {
         setIsAdding(true);
     };
 
-    const handleDelete = async (id: string) => {
-        if (window.confirm('Are you sure you want to delete this FAQ?')) {
+    const handleDelete = async (id: string, question: string) => {
+        if (await confirmDelete({
+        itemName: question,
+        title: 'Delete this FAQ?',
+        description: 'This cannot be undone.',
+      })) {
             try {
                 await deleteFAQ(id);
             } catch (err) {
@@ -308,7 +315,7 @@ const FAQManager: React.FC<FAQManagerProps> = ({ onBack }) => {
                                                         <Edit2 className="w-5 h-5" />
                                                     </button>
                                                     <button
-                                                        onClick={() => handleDelete(faq.id)}
+                                                        onClick={() => handleDelete(faq.id, faq.question)}
                                                         className="p-2.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                                         title="Delete FAQ"
                                                     >
@@ -335,6 +342,7 @@ const FAQManager: React.FC<FAQManagerProps> = ({ onBack }) => {
                     </code>
                 </p>
             </div>
+          <ConfirmDeleteDialog {...confirmDialogProps} />
         </div>
     );
 };

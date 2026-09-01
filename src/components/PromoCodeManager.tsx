@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { PromoCode } from '../types';
 import { Plus, Search, Tag, Trash2, Edit2, CheckCircle, XCircle } from 'lucide-react';
+import { useConfirmDelete } from '../hooks/useConfirmDelete';
+import ConfirmDeleteDialog from './ConfirmDeleteDialog';
 
 const PromoCodeManager: React.FC = () => {
+  const { confirmDelete, confirmDialogProps } = useConfirmDelete();
     const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -74,8 +77,12 @@ const PromoCodeManager: React.FC = () => {
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this promo code?')) return;
+    const handleDelete = async (id: string, promoCode: string) => {
+        if (!(await confirmDelete({
+        itemName: promoCode,
+        title: 'Delete this promo code?',
+        description: 'This cannot be undone.',
+      }))) return;
         try {
             const { error } = await supabase.from('promo_codes').delete().eq('id', id);
             if (error) throw error;
@@ -174,7 +181,7 @@ const PromoCodeManager: React.FC = () => {
                                             <Edit2 className="w-4 h-4" />
                                         </button>
                                         <button
-                                            onClick={() => handleDelete(code.id)}
+                                            onClick={() => handleDelete(code.id, code.code)}
                                             className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                                         >
                                             <Trash2 className="w-4 h-4" />
@@ -332,6 +339,7 @@ const PromoCodeManager: React.FC = () => {
                     </div>
                 </div>
             )}
+          <ConfirmDeleteDialog {...confirmDialogProps} />
         </div>
     );
 };

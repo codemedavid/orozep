@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Save, X, ArrowLeft, GripVertical, Package } from 'lucide-react';
 import { useCategories, Category } from '../hooks/useCategories';
 import { supabase } from '../lib/supabase';
+import { useConfirmDelete } from '../hooks/useConfirmDelete';
+import ConfirmDeleteDialog from './ConfirmDeleteDialog';
 
 interface CategoryManagerProps {
   onBack: () => void;
 }
 
 const CategoryManager: React.FC<CategoryManagerProps> = ({ onBack }) => {
+  const { confirmDelete, confirmDialogProps } = useConfirmDelete();
   const { categories, addCategory, updateCategory, deleteCategory, reorderCategories } = useCategories();
   const [currentView, setCurrentView] = useState<'list' | 'add' | 'edit'>('list');
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -71,8 +74,12 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({ onBack }) => {
     setCurrentView('edit');
   };
 
-  const handleDeleteCategory = async (id: string) => {
-    if (confirm('Are you sure you want to delete this category? This action cannot be undone.')) {
+  const handleDeleteCategory = async (id: string, categoryName: string) => {
+    if (await confirmDelete({
+        itemName: categoryName,
+        title: 'Delete this category?',
+        description: 'This cannot be undone.',
+      })) {
       try {
         await deleteCategory(id);
       } catch (error) {
@@ -379,7 +386,7 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({ onBack }) => {
                         </button>
 
                         <button
-                          onClick={() => handleDeleteCategory(category.id)}
+                          onClick={() => handleDeleteCategory(category.id, category.name)}
                           disabled={hasProducts && !isAllCategory}
                           className="p-1.5 sm:p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-gray-400 disabled:hover:bg-transparent"
                           title={hasProducts && !isAllCategory ? 'Cannot delete category with products' : 'Delete category'}
@@ -395,6 +402,7 @@ const CategoryManager: React.FC<CategoryManagerProps> = ({ onBack }) => {
           </div>
         )}
       </div>
+      <ConfirmDeleteDialog {...confirmDialogProps} />
     </div>
   );
 };
