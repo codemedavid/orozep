@@ -140,4 +140,33 @@ describe('RecycleBinManager', () => {
     // A "delete forever" button in the recovery UI would defeat its purpose.
     expect(screen.queryByRole('button', { name: /forever|permanently|purge/i })).toBeNull();
   });
+
+  it('shows an item on its last day rather than a stale countdown', async () => {
+    setupHook([[{ ...RECENTLY_BINNED, deleted_at: daysAgo(30) }]]);
+    render(<RecycleBinManager onBack={vi.fn()} />);
+
+    expect(await screen.findByText(/purges today/i)).toBeInTheDocument();
+  });
+
+  it('renders a row whose deletion date cannot be read instead of crashing', async () => {
+    // A row can carry a stamp we cannot parse. It must still be restorable.
+    setupHook([[{ ...RECENTLY_BINNED, deleted_at: 'not-a-date' }]]);
+    render(<RecycleBinManager onBack={vi.fn()} />);
+
+    expect(await screen.findByText('Retatrutide 10mg')).toBeInTheDocument();
+    expect(screen.getByText(/no expiry recorded/i)).toBeInTheDocument();
+    expect(screen.getByText(/unknown date/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /restore/i })).toBeInTheDocument();
+  });
+
+  it('still explains a failed restore when the hook gives no reason', async () => {
+    const user = userEvent.setup();
+    render(<RecycleBinManager onBack={vi.fn()} />);
+    restoreProduct.mockResolvedValueOnce({ success: false });
+
+    await screen.findByText('Retatrutide 10mg');
+    await user.click(screen.getAllByRole('button', { name: /restore/i })[0]);
+
+    expect(await screen.findByText(/could not restore "Retatrutide 10mg"/i)).toBeInTheDocument();
+  });
 });
