@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Save, X, ArrowLeft, TrendingUp, Package, Users, FolderOpen, CreditCard, Sparkles, Layers, Shield, RefreshCw, Warehouse, ShoppingCart, HelpCircle, MapPin, Tag, Truck, Star } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, ArrowLeft, TrendingUp, Package, Users, FolderOpen, CreditCard, Sparkles, Layers, Shield, RefreshCw, Warehouse, ShoppingCart, HelpCircle, MapPin, Tag, Truck, Star, ArchiveRestore } from 'lucide-react';
 import type { Product } from '../types';
 import { useMenu } from '../hooks/useMenu';
 import { useCategories } from '../hooks/useCategories';
@@ -19,6 +19,7 @@ import PromoCodeManager from './PromoCodeManager';
 import CourierManager from './CourierManager';
 import ProtocolManager from './ProtocolManager';
 import ReviewsManager from './ReviewsManager';
+import RecycleBinManager from './RecycleBinManager';
 // GuideManager removed (Peptalk functionality disabled)
 
 const AdminDashboard: React.FC = () => {
@@ -29,7 +30,7 @@ const AdminDashboard: React.FC = () => {
   const [loginError, setLoginError] = useState('');
   const { products, loading, addProduct, updateProduct, deleteProduct, refreshProducts } = useMenu({ realtime: true });
   const { categories } = useCategories();
-  const [currentView, setCurrentView] = useState<'dashboard' | 'products' | 'add' | 'edit' | 'categories' | 'payments' | 'inventory' | 'orders' | 'shipping' | 'coa' | 'faq' | 'settings' | 'promo-codes' | 'couriers' | 'protocols' | 'reviews'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'products' | 'add' | 'edit' | 'categories' | 'payments' | 'inventory' | 'orders' | 'shipping' | 'coa' | 'faq' | 'settings' | 'promo-codes' | 'couriers' | 'protocols' | 'reviews' | 'recycle-bin'>('dashboard');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [managingVariationsProductId, setManagingVariationsProductId] = useState<string | null>(null);
@@ -1243,6 +1244,15 @@ const AdminDashboard: React.FC = () => {
     );
   }
 
+  // Recently Deleted View
+  if (currentView === 'recycle-bin') {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <RecycleBinManager onBack={() => setCurrentView('dashboard')} />
+      </div>
+    );
+  }
+
   // Orders View
   if (currentView === 'orders') {
     return (
@@ -1549,6 +1559,18 @@ const AdminDashboard: React.FC = () => {
                   <div>
                     <span className="block text-sm font-semibold text-gray-900 group-hover:text-amber-600 transition-colors">Orders</span>
                     <span className="text-xs text-gray-500">View transactions</span>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setCurrentView('recycle-bin')}
+                  className="group flex items-center gap-3 p-3 text-left hover:bg-gray-50 rounded-xl transition-all border border-transparent hover:border-gray-200"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-sky-50 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <ArchiveRestore className="h-5 w-5 text-sky-600" />
+                  </div>
+                  <div>
+                    <span className="block text-sm font-semibold text-gray-900 group-hover:text-sky-600 transition-colors">Recently Deleted</span>
+                    <span className="text-xs text-gray-500">Restore removed items</span>
                   </div>
                 </button>
                 <button
