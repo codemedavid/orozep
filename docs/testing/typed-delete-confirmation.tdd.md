@@ -193,9 +193,8 @@ structurally; this proves the pattern itself resolves at runtime.
 
 ## Not yet done
 
-- Orders still have **no** Recently Deleted bin, so bulk and all-order removal
-  really is irreversible. The prompts say so, but soft delete should be extended
-  to `orders` next.
+- ~~Orders still have no Recently Deleted bin~~ — done, see
+  `orders-recycle-bin.tdd.md`. The prompts were updated to match.
 - The `anon` write-grant lockdown is still outstanding. Typed confirmation
   prevents operator accidents; it does nothing about the public key.
 

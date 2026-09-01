@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, RotateCcw, Archive, AlertTriangle, ShieldCheck } from 'lucide-react';
 import type { Product } from '../types';
 import { useMenu } from '../hooks/useMenu';
-import { daysUntilPurge, RECYCLE_BIN_RETENTION_DAYS } from '../utils/recycleBin';
+import { daysUntilPurge, purgeCountdownLabel, RECYCLE_BIN_RETENTION_DAYS } from '../utils/recycleBin';
 
 interface RecycleBinManagerProps {
   onBack: () => void;
@@ -10,15 +10,6 @@ interface RecycleBinManagerProps {
 
 /** Below this many days left, the row is styled as urgent. */
 const URGENT_THRESHOLD_DAYS = 7;
-
-/** Human label for the purge countdown. */
-function purgeLabel(product: Product): string {
-  const days = daysUntilPurge(product);
-
-  if (days === null) return 'No expiry recorded';
-  if (days === 0) return 'Purges today';
-  return `${days} day${days === 1 ? '' : 's'} left`;
-}
 
 /** Date an item was binned, in the admin's locale. */
 function binnedOn(product: Product): string {
@@ -159,7 +150,7 @@ export default function RecycleBinManager({ onBack }: RecycleBinManagerProps) {
                           : 'bg-gray-100 text-gray-600 border border-gray-200'
                       }`}
                     >
-                      {purgeLabel(product)}
+                      {purgeCountdownLabel(product)}
                     </span>
 
                     <button

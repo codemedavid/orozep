@@ -214,9 +214,9 @@ Also pre-existing, not addressed here:
 Removal and recovery are now complete end to end for **products and variations**.
 Remaining:
 
-- The other managers (FAQs, couriers, orders, reviews, COAs, promo codes) still
-  remove rows outright. They need the same treatment before write grants can be
-  tightened globally.
+- ~~The other managers still remove rows outright~~ — the confirmation guards are
+  done (`typed-delete-confirmation.tdd.md`) and orders now have their own bin
+  (`orders-recycle-bin.tdd.md`). The remaining managers still hard-delete.
 - ~~The typed-confirmation modal ("code before delete")~~ — done for the six
   product and order paths, see `typed-delete-confirmation.tdd.md`. Fourteen
   lower-risk `window.confirm` guards remain.

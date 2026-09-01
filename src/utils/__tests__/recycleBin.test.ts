@@ -6,6 +6,7 @@ import {
   partitionByDeletion,
   daysUntilPurge,
   isPurgeable,
+  purgeCountdownLabel,
 } from '../recycleBin';
 import type { SoftDeletable } from '../recycleBin';
 
@@ -138,5 +139,31 @@ describe('isPurgeable', () => {
   it('refuses to purge a row whose deletion timestamp cannot be read', () => {
     // Safety: an undateable row is never auto-destroyed, it is surfaced for a human.
     expect(isPurgeable({ id: 'a', deleted_at: 'garbage' }, NOW)).toBe(false);
+  });
+});
+
+describe('purgeCountdownLabel', () => {
+  it('pluralises a multi-day countdown', () => {
+    expect(purgeCountdownLabel(deletedDaysAgo('a', 2), NOW)).toBe('28 days left');
+  });
+
+  it('uses the singular on the last day', () => {
+    expect(purgeCountdownLabel(deletedDaysAgo('a', 29), NOW)).toBe('1 day left');
+  });
+
+  it('says the row goes today once the window has elapsed', () => {
+    expect(purgeCountdownLabel(deletedDaysAgo('a', RECYCLE_BIN_RETENTION_DAYS), NOW)).toBe('Purges today');
+  });
+
+  it('reads the same for a long-expired row, never a negative count', () => {
+    expect(purgeCountdownLabel(deletedDaysAgo('a', 400), NOW)).toBe('Purges today');
+  });
+
+  it('renders a neutral phrase rather than a blank for an unreadable stamp', () => {
+    expect(purgeCountdownLabel({ id: 'a', deleted_at: 'garbage' }, NOW)).toBe('No expiry recorded');
+  });
+
+  it('renders a neutral phrase for a row that was never deleted', () => {
+    expect(purgeCountdownLabel({ id: 'a', deleted_at: null }, NOW)).toBe('No expiry recorded');
   });
 });
