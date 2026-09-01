@@ -145,13 +145,54 @@ Full suite: **206 passed, 9 failed (215)**. The 9 are the pre-existing
 before any of this work. `npm run build` succeeds. No tsc errors in any file
 authored here.
 
+### Task 5 — the remaining thirteen guards
+
+A second pass converted every other destructive action: payment method, courier,
+COA report, category, protocol, shipping location, review, article, product size,
+FAQ, promo code, the homepage reset-to-defaults, and the bulk AI protocol
+regeneration (which overwrites every protocol and spends API credits).
+
+Handlers that only received an `id` now take the display name too, passed from
+the call site that already had the object in hand. Untitled reviews fall back to
+a typeable phrase.
+
+**Two actions deliberately keep a native confirm**, and the policy guard
+allowlists them: confirming and cancelling an order. Those are routine daily
+workflow, not data loss. Typed confirmation on routine actions trains an
+operator to type through prompts, which destroys the signal on the actions that
+matter.
+
+Prompts now state the truth per entity: products and sizes say they are
+recoverable from Recently Deleted; everything else says it cannot be undone,
+because it cannot.
+
+`AdminDashboard` needed a second dialog instance in the protocols view — the
+bulk-generate button lives there, while the existing instance only rendered in
+the products view.
+
+Validation, three layers because a source scan alone is not enough:
+
+1. **Policy guard** (`no-native-confirm.test.ts`) — RED at 13 failed / 3 passed,
+   GREEN at 16 passed.
+2. **Type diff against baseline** — the earlier scope bug surfaces in tsc as
+   `Cannot find name 'confirmDialogProps'`, so the conversion was checked with a
+   stash-and-compare: 154 pre-existing errors before, 154 after, **0 new**. One
+   genuinely new error was caught this way and fixed (`review.title` is
+   `string | null`).
+3. **Structural placement audit** — for all 13 sites, the delete control and the
+   dialog sit inside the same `return (` block, so the confirmation promise can
+   always be resolved rather than hanging on a dialog that never mounts.
+
+### Task 6 — runtime proof of the converted pattern
+
+`FAQManager.confirm.test.tsx` renders one converted manager and drives it: the
+first click opens a dialog rather than deleting, the dialog names the FAQ's
+question, deletion happens only after the question is typed, and cancelling
+leaves it alone. The other eleven were wired identically and audited
+structurally; this proves the pattern itself resolves at runtime.
+
 ## Not yet done
 
-- **Fourteen `window.confirm` guards remain** on the lower-risk managers: FAQs,
-  couriers, COAs, promo codes, reviews, shipping locations, categories, guides,
-  protocols, payment methods, and order cancel/confirm. `useConfirmDelete` is a
-  one-line change at each; they were left out of this pass to keep the diff
-  reviewable.
 - Orders still have **no** Recently Deleted bin, so bulk and all-order removal
   really is irreversible. The prompts say so, but soft delete should be extended
   to `orders` next.
