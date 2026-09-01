@@ -42,6 +42,10 @@ export interface Order {
   promo_code: string | null;
   discount_applied: number | null;
   order_number: string | null;
+
+  // Soft deletion — see utils/recycleBin.ts. Null/absent means live.
+  deleted_at?: string | null;
+  deleted_by?: string | null;
 }
 
 // Statuses shown as filter tiles, in display order.
@@ -99,6 +103,14 @@ export interface UseOrdersResult {
   setStatusFilter: (status: string) => void;
   setSearchQuery: (query: string) => void;
   refresh: () => Promise<void>;
+  /** Moves the given orders to the Recently Deleted bin. */
+  deleteOrders: (ids: string[]) => Promise<{ success: boolean; error?: string }>;
+  /** Moves every live order to the bin. */
+  deleteAllOrders: () => Promise<{ success: boolean; error?: string }>;
+  /** Contents of the bin, newest removal first. */
+  fetchDeletedOrders: () => Promise<Order[]>;
+  /** Brings one order back out of the bin. */
+  restoreOrder: (id: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 /**
@@ -150,6 +162,8 @@ export function useOrders(): UseOrdersResult {
       let query = supabase
         .from('orders')
         .select('*', { count: 'exact' })
+        // Recently Deleted orders are excluded in SQL, not filtered client-side.
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
       if (statusFilter !== 'all') {
@@ -197,7 +211,8 @@ export function useOrders(): UseOrdersResult {
     const headCount = async (status?: OrderStatus): Promise<number> => {
       let query = supabase
         .from('orders')
-        .select('*', { count: 'exact', head: true });
+        .select('*', { count: 'exact', head: true })
+        .is('deleted_at', null);
       if (status) query = query.eq('order_status', status);
       const { count } = await query;
       return count ?? 0;
@@ -231,6 +246,85 @@ export function useOrders(): UseOrdersResult {
     await Promise.all([loadPage(), loadStatusCounts()]);
   }, [loadPage, loadStatusCounts]);
 
+  /**
+   * Removal is an UPDATE, never a DELETE. Orders carry customer details and
+   * payment proofs; losing them to a stray click is not recoverable any other
+   * way. See utils/recycleBin.ts for the retention window.
+   */
+  const deleteOrders = useCallback(
+    async (ids: string[]) => {
+      if (ids.length === 0) return { success: true };
+
+      try {
+        const { error: updateError } = await (supabase.from('orders') as any)
+          .update({ deleted_at: new Date().toISOString() })
+          .in('id', ids);
+
+        if (updateError) throw updateError;
+
+        await refresh();
+        return { success: true };
+      } catch (err) {
+        console.error('Error deleting orders:', err);
+        return { success: false, error: err instanceof Error ? err.message : 'Failed to delete orders.' };
+      }
+    },
+    [refresh],
+  );
+
+  const deleteAllOrders = useCallback(async () => {
+    try {
+      const { error: updateError } = await (supabase.from('orders') as any)
+        .update({ deleted_at: new Date().toISOString() })
+        // Only the live ones; re-binning an already binned order would reset
+        // its countdown and quietly extend the retention window.
+        .is('deleted_at', null);
+
+      if (updateError) throw updateError;
+
+      await refresh();
+      return { success: true };
+    } catch (err) {
+      console.error('Error deleting all orders:', err);
+      return { success: false, error: err instanceof Error ? err.message : 'Failed to delete all orders.' };
+    }
+  }, [refresh]);
+
+  const fetchDeletedOrders = useCallback(async (): Promise<Order[]> => {
+    try {
+      const { data, error: queryError } = await supabase
+        .from('orders')
+        .select('*')
+        .not('deleted_at', 'is', null)
+        .order('deleted_at', { ascending: false });
+
+      if (queryError) throw queryError;
+      return (data as Order[]) ?? [];
+    } catch (err) {
+      console.error('Error loading deleted orders:', err);
+      return [];
+    }
+  }, []);
+
+  const restoreOrder = useCallback(
+    async (id: string) => {
+      try {
+        const { error: updateError } = await (supabase.from('orders') as any)
+          .update({ deleted_at: null, deleted_by: null })
+          .eq('id', id);
+
+        if (updateError) throw updateError;
+
+        await refresh();
+        return { success: true };
+      } catch (err) {
+        console.error('Error restoring order:', err);
+        return { success: false, error: err instanceof Error ? err.message : 'Failed to restore order.' };
+      }
+    },
+    [refresh],
+  );
+
   const totalPages = Math.max(1, Math.ceil(totalCount / ORDERS_PAGE_SIZE));
 
   // If deletions (or a filter change) shrink the result set below the current
@@ -254,5 +348,9 @@ export function useOrders(): UseOrdersResult {
     setStatusFilter,
     setSearchQuery,
     refresh,
+    deleteOrders,
+    deleteAllOrders,
+    fetchDeletedOrders,
+    restoreOrder,
   };
 }

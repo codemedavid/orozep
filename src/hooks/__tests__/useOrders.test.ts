@@ -66,6 +66,11 @@ function makeBuilder() {
     calls.or = s;
     return builder;
   });
+  // Soft-delete filters: the list and the counts both exclude the bin.
+  builder.is = vi.fn(() => builder);
+  builder.not = vi.fn(() => builder);
+  builder.in = vi.fn(() => builder);
+  builder.update = vi.fn(() => builder);
   builder.range = vi.fn((f: number, t: number) => {
     calls.range = [f, t];
     return builder;

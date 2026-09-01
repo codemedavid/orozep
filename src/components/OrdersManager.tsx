@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Package, CheckCircle, XCircle, Clock, Truck, AlertCircle, Search, RefreshCw, Eye, MessageCircle, Image as ImageIcon, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Package, CheckCircle, XCircle, Clock, Truck, AlertCircle, Search, RefreshCw, Eye, MessageCircle, Image as ImageIcon, Trash2, ChevronLeft, ChevronRight, ArchiveRestore, Archive, RotateCcw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { daysUntilPurge, purgeCountdownLabel, RECYCLE_BIN_RETENTION_DAYS } from '../utils/recycleBin';
 import { useConfirmDelete } from '../hooks/useConfirmDelete';
 import ConfirmDeleteDialog from './ConfirmDeleteDialog';
 import { useMenu } from '../hooks/useMenu';
@@ -27,6 +28,10 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
     setStatusFilter,
     setSearchQuery,
     refresh,
+    deleteOrders,
+    deleteAllOrders,
+    fetchDeletedOrders,
+    restoreOrder,
   } = useOrders();
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -34,6 +39,11 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
   const { confirmDelete, confirmDialogProps } = useConfirmDelete();
+  const [showTrash, setShowTrash] = useState(false);
+  const [binnedOrders, setBinnedOrders] = useState<Order[]>([]);
+  const [binLoading, setBinLoading] = useState(false);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [binError, setBinError] = useState<string | null>(null);
   const { refreshProducts } = useMenu();
 
   // Clear the selection whenever the visible page of orders changes so we
@@ -73,29 +83,20 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
     const selectedCount = selectedOrderIds.size;
     const confirmed = await confirmDelete({
       itemName: `delete ${selectedCount} orders`,
-      title: `Permanently delete ${selectedCount} order(s)?`,
-      // Orders are not soft-deleted yet, so this really is irreversible.
-      description: 'Orders have no Recently Deleted bin. This cannot be undone.',
+      title: `Delete ${selectedCount} order(s)?`,
+      description: `They move to Recently Deleted and can be restored for ${RECYCLE_BIN_RETENTION_DAYS} days.`,
     });
     if (!confirmed) return;
 
-    try {
-      setIsProcessing(true);
-      const { error } = await supabase
-        .from('orders')
-        .delete()
-        .in('id', Array.from(selectedOrderIds));
+    setIsProcessing(true);
+    const result = await deleteOrders(Array.from(selectedOrderIds));
+    setIsProcessing(false);
 
-      if (error) throw error;
-
+    if (result.success) {
       setSelectedOrderIds(new Set());
-      await refresh();
-      alert(`${selectedOrderIds.size} order(s) deleted successfully.`);
-    } catch (error) {
-      console.error('Error deleting orders:', error);
-      alert('Failed to delete selected orders. Please try again.');
-    } finally {
-      setIsProcessing(false);
+      alert(`${selectedCount} order(s) moved to Recently Deleted.`);
+    } else {
+      alert(result.error ?? 'Failed to delete selected orders. Please try again.');
     }
   };
 
@@ -103,31 +104,46 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
     if (totalCount === 0) return;
     const confirmed = await confirmDelete({
       itemName: 'DELETE ALL ORDERS',
-      title: `Permanently delete ALL ${totalCount} orders?`,
-      description:
-        'Every order in the system, including customer details and payment proofs. Orders have no Recently Deleted bin — this cannot be undone.',
+      title: `Delete ALL ${totalCount} orders?`,
+      description: `Every order moves to Recently Deleted, with its customer details and payment proof, and can be restored for ${RECYCLE_BIN_RETENTION_DAYS} days.`,
       confirmLabel: 'Delete',
     });
     if (!confirmed) return;
 
-    try {
-      setIsProcessing(true);
-      const { error } = await supabase
-        .from('orders')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000');
+    setIsProcessing(true);
+    const result = await deleteAllOrders();
+    setIsProcessing(false);
 
-      if (error) throw error;
-
+    if (result.success) {
       setSelectedOrderIds(new Set());
-      await refresh();
-      alert('All orders have been deleted successfully.');
-    } catch (error) {
-      console.error('Error deleting all orders:', error);
-      alert('Failed to delete all orders. Please try again.');
-    } finally {
-      setIsProcessing(false);
+      alert('All orders moved to Recently Deleted.');
+    } else {
+      alert(result.error ?? 'Failed to delete all orders. Please try again.');
     }
+  };
+
+  const openTrash = async () => {
+    setShowTrash(true);
+    setBinLoading(true);
+    setBinError(null);
+    setBinnedOrders(await fetchDeletedOrders());
+    setBinLoading(false);
+  };
+
+  const handleRestoreOrder = async (order: Order) => {
+    setRestoringId(order.id);
+    setBinError(null);
+
+    const result = await restoreOrder(order.id);
+
+    if (result.success) {
+      setBinnedOrders(await fetchDeletedOrders());
+    } else {
+      // Leave the order in the bin so the admin can retry.
+      setBinError(result.error ?? `Could not restore order ${order.order_number ?? order.id}.`);
+    }
+
+    setRestoringId(null);
   };
 
   const handleConfirmOrder = async (order: Order) => {
@@ -380,6 +396,120 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
     );
   }
 
+  /** Below this many days left, a bin row is styled as urgent. */
+  const URGENT_THRESHOLD_DAYS = 7;
+
+  if (showTrash) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-white">
+        <header className="bg-white shadow-md border-b-4 border-navy-900">
+          <div className="max-w-4xl mx-auto px-3 sm:px-4">
+            <div className="flex items-center gap-2 h-12 md:h-14">
+              <button
+                onClick={() => setShowTrash(false)}
+                className="text-gray-700 hover:text-gold-600 transition-colors flex items-center gap-1 group focus:outline-none focus-visible:ring-2 focus-visible:ring-gold-500 rounded"
+              >
+                <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
+                <span className="text-xs md:text-sm">Back to orders</span>
+              </button>
+              <h1 className="text-sm md:text-base font-bold text-navy-900">Recently Deleted</h1>
+            </div>
+          </div>
+        </header>
+
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 md:py-6">
+          <div className="flex items-start gap-3 mb-4 md:mb-6 rounded-lg md:rounded-xl border border-navy-700/30 bg-white shadow-lg p-4 md:p-5">
+            <Archive className="w-5 h-5 md:w-6 md:h-6 text-gold-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm md:text-base font-semibold text-navy-900">
+                {binLoading
+                  ? 'Checking the bin…'
+                  : `${binnedOrders.length} order${binnedOrders.length === 1 ? '' : 's'} recoverable`}
+              </p>
+              <p className="text-xs md:text-sm text-gray-600 mt-0.5">
+                Orders in the bin keep their customer details and payment proof for{' '}
+                {RECYCLE_BIN_RETENTION_DAYS} days. Restoring one returns it to the orders list.
+              </p>
+            </div>
+          </div>
+
+          {binError && (
+            <div
+              role="alert"
+              className="flex items-center gap-2 mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800"
+            >
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{binError}</span>
+            </div>
+          )}
+
+          {binLoading && (
+            <div className="text-center py-12">
+              <div className="w-12 h-12 border-4 border-gray-200 border-t-gold-600 rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-gray-600 text-sm font-medium">Loading the bin…</p>
+            </div>
+          )}
+
+          {!binLoading && binnedOrders.length === 0 && (
+            <div className="text-center py-14 rounded-lg md:rounded-xl border border-dashed border-navy-700/30 bg-white">
+              <Archive className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-sm md:text-base font-semibold text-navy-900">Nothing in the bin</p>
+              <p className="text-xs md:text-sm text-gray-500 mt-1">
+                Every order you remove lands here first, so nothing is ever lost.
+              </p>
+            </div>
+          )}
+
+          {!binLoading && binnedOrders.length > 0 && (
+            <ul className="space-y-2 md:space-y-3">
+              {binnedOrders.map((binned) => {
+                const daysLeft = daysUntilPurge(binned);
+                const isUrgent = daysLeft !== null && daysLeft <= URGENT_THRESHOLD_DAYS;
+
+                return (
+                  <li
+                    key={binned.id}
+                    className="flex items-center justify-between gap-3 rounded-lg md:rounded-xl border border-navy-700/30 bg-white shadow-sm hover:shadow-md transition-shadow p-3 md:p-4"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm md:text-base font-semibold text-navy-900 truncate">
+                        {binned.order_number ?? binned.id.slice(0, 8)}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5 truncate">
+                        {binned.customer_name} · ₱{Number(binned.total_price).toLocaleString('en-PH')}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 md:gap-3 shrink-0">
+                      <span
+                        className={`text-[11px] md:text-xs font-medium px-2 py-1 rounded-full ${
+                          isUrgent
+                            ? 'bg-red-50 text-red-700 border border-red-200'
+                            : 'bg-gray-100 text-gray-600 border border-gray-200'
+                        }`}
+                      >
+                        {purgeCountdownLabel(binned)}
+                      </span>
+
+                      <button
+                        onClick={() => handleRestoreOrder(binned)}
+                        disabled={restoringId === binned.id}
+                        className="flex items-center gap-1.5 bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 text-black px-2.5 md:px-3 py-1.5 rounded-md font-semibold text-xs shadow-sm hover:shadow transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-900"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        {restoringId === binned.id ? 'Restoring…' : 'Restore'}
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-white">
       {/* Header */}
@@ -397,6 +527,13 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
               <h1 className="text-sm md:text-base lg:text-xl font-bold text-navy-900 truncate">
                 Orders Management
               </h1>
+              <button
+                onClick={openTrash}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-gray-700 border border-gray-300 hover:border-gold-500 hover:text-gold-700 transition-colors shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold-500"
+              >
+                <ArchiveRestore className="h-3.5 w-3.5" />
+                Recently Deleted
+              </button>
             </div>
             <button
               onClick={handleRefresh}

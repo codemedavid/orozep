@@ -81,3 +81,16 @@ export function daysUntilPurge<T extends SoftDeletable>(row: T, now: Date = new 
 export function isPurgeable<T extends SoftDeletable>(row: T, now: Date = new Date()): boolean {
   return daysUntilPurge(row, now) === 0;
 }
+
+/**
+ * Human label for the purge countdown, e.g. "28 days left", "1 day left",
+ * "Purges today". Returns a neutral phrase when the row carries no readable
+ * stamp, so a bin row never renders a blank or a NaN.
+ */
+export function purgeCountdownLabel<T extends SoftDeletable>(row: T, now: Date = new Date()): string {
+  const days = daysUntilPurge(row, now);
+
+  if (days === null) return 'No expiry recorded';
+  if (days === 0) return 'Purges today';
+  return `${days} day${days === 1 ? '' : 's'} left`;
+}
