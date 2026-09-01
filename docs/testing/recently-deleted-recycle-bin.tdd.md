@@ -217,8 +217,9 @@ Remaining:
 - The other managers (FAQs, couriers, orders, reviews, COAs, promo codes) still
   remove rows outright. They need the same treatment before write grants can be
   tightened globally.
-- The typed-confirmation modal ("code before delete") replacing `window.confirm`
-  at the 20 call sites, and removing the "remove ALL orders" action.
+- ~~The typed-confirmation modal ("code before delete")~~ — done for the six
+  product and order paths, see `typed-delete-confirmation.tdd.md`. Fourteen
+  lower-risk `window.confirm` guards remain.
 - Audit-log triggers capturing the full old row, so a future incident is
   attributable.
 - The `anon` write-grant lockdown, RLS policies, and key rotation.
