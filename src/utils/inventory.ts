@@ -7,6 +7,7 @@
 // products that have no variations at all.
 
 import type { Product, ProductVariation } from '../types';
+import { isActive } from './recycleBin';
 
 /** Coerces a stock column that may be null/undefined/negative into a count. */
 function toStockCount(value: number | null | undefined): number {
@@ -25,12 +26,13 @@ export function hasSellableStock(product: Product): boolean {
 }
 
 /**
- * True when the product belongs on the customer-facing catalog: an operator has
- * not delisted it AND there is stock to sell. Admin surfaces must not use this —
- * they need sold-out products visible in order to restock them.
+ * True when the product belongs on the customer-facing catalog: it is not in the
+ * Recently Deleted bin, an operator has not delisted it, AND there is stock to
+ * sell. Admin surfaces must not use this — they need sold-out and binned
+ * products visible in order to restock or restore them.
  */
 export function isVisibleOnStorefront(product: Product): boolean {
-  return product.available && hasSellableStock(product);
+  return isActive(product) && product.available && hasSellableStock(product);
 }
 
 /** Returns a new array containing only the products a shopper can buy. */

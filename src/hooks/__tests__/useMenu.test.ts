@@ -40,12 +40,15 @@ const PRODUCTS_WITH_EMBED = [
   },
 ];
 
-/** A thenable query builder: chainable (.select/.eq/.order) and awaitable. */
+/**
+ * A thenable query builder: chainable and awaitable.
+ * `.is`/`.not` model the soft-delete filters (`deleted_at IS NULL`).
+ */
 function makeThenableBuilder(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {};
-  builder.select = vi.fn(() => builder);
-  builder.eq = vi.fn(() => builder);
-  builder.order = vi.fn(() => builder);
+  for (const method of ['select', 'eq', 'is', 'not', 'order', 'update']) {
+    builder[method] = vi.fn(() => builder);
+  }
   builder.then = (resolve: (r: unknown) => unknown) => resolve(result);
   return builder;
 }

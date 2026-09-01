@@ -30,6 +30,10 @@ export interface Product {
   created_at: string;
   updated_at: string;
 
+  // Soft deletion — see utils/recycleBin.ts. Null/absent means live.
+  deleted_at?: string | null;
+  deleted_by?: string | null;
+
   // Relations
   variations?: ProductVariation[];
 }
@@ -44,6 +48,10 @@ export interface ProductVariation {
   discount_active: boolean;
   stock_quantity: number;
   created_at: string;
+
+  // Soft deletion — see utils/recycleBin.ts. Null/absent means live.
+  deleted_at?: string | null;
+  deleted_by?: string | null;
 }
 
 export interface Category {

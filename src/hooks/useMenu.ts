@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Product, ProductVariation } from '../types';
+import { isActive } from '../utils/recycleBin';
 
 // Product columns fetched for the storefront.
 const PRODUCT_COLUMNS =
-  'id, name, description, category, base_price, discount_price, discount_start_date, discount_end_date, discount_active, purity_percentage, molecular_weight, cas_number, sequence, storage_conditions, inclusions, stock_quantity, available, featured, image_url, safety_sheet_url, created_at, updated_at';
+  'id, name, description, category, base_price, discount_price, discount_start_date, discount_end_date, discount_active, purity_percentage, molecular_weight, cas_number, sequence, storage_conditions, inclusions, stock_quantity, available, featured, image_url, safety_sheet_url, created_at, updated_at, deleted_at, deleted_by';
 
 // Variations are embedded via a PostgREST join (`product_variations(*)`) so the
 // whole catalog loads in ONE request instead of 1 + N (one query per product).
@@ -108,6 +109,8 @@ export function useMenu(options: UseMenuOptions = {}) {
       const { data, error } = await (supabase.from('products') as any)
         .select(PRODUCT_SELECT)
         .eq('available', true)
+        // Recently Deleted rows never cross the wire to a customer.
+        .is('deleted_at', null)
         .order('featured', { ascending: false })
         .order('name', { ascending: true })
         .order('quantity_mg', { referencedTable: 'product_variations', ascending: true });
@@ -123,6 +126,7 @@ export function useMenu(options: UseMenuOptions = {}) {
           .from('products')
           .select(PRODUCT_COLUMNS)
           .eq('available', true)
+          .is('deleted_at', null)
           .order('featured', { ascending: false })
           .order('name', { ascending: true });
         if (fallback.error) throw fallback.error;
@@ -133,7 +137,7 @@ export function useMenu(options: UseMenuOptions = {}) {
         const { product_variations, ...product } = row;
         return {
           ...(product as Omit<Product, 'variations'>),
-          variations: (product_variations ?? []) as ProductVariation[],
+          variations: ((product_variations ?? []) as ProductVariation[]).filter(isActive),
         };
       });
 
@@ -268,11 +272,16 @@ export function useMenu(options: UseMenuOptions = {}) {
     }
   };
 
+  /**
+   * Moves a product to the Recently Deleted bin. This is an UPDATE, never a
+   * DELETE: the row survives with its variations and stock intact so an
+   * accidental — or malicious — delete is always reversible. See
+   * utils/recycleBin.ts for the retention window.
+   */
   const deleteProduct = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('products')
-        .delete()
+      const { error } = await (supabase.from('products') as any)
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', id);
 
       if (error) throw error;
@@ -283,6 +292,47 @@ export function useMenu(options: UseMenuOptions = {}) {
     } catch (err) {
       console.error('Error deleting product:', err);
       return { success: false, error: err instanceof Error ? err.message : 'Failed to delete product' };
+    }
+  };
+
+  /** Brings a product back out of the Recently Deleted bin. */
+  const restoreProduct = async (id: string) => {
+    try {
+      const { error } = await (supabase.from('products') as any)
+        .update({ deleted_at: null, deleted_by: null })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      invalidateMenuCache();
+      await fetchProducts();
+      return { success: true };
+    } catch (err) {
+      console.error('Error restoring product:', err);
+      return { success: false, error: err instanceof Error ? err.message : 'Failed to restore product' };
+    }
+  };
+
+  /** Contents of the Recently Deleted bin, newest deletion first. */
+  const fetchDeletedProducts = async (): Promise<Product[]> => {
+    try {
+      const { data, error } = await (supabase.from('products') as any)
+        .select(PRODUCT_SELECT)
+        .not('deleted_at', 'is', null)
+        .order('deleted_at', { ascending: false });
+
+      if (error) throw error;
+
+      return ((data as Record<string, unknown>[]) || []).map((row) => {
+        const { product_variations, ...product } = row;
+        return {
+          ...(product as Omit<Product, 'variations'>),
+          variations: (product_variations ?? []) as ProductVariation[],
+        };
+      });
+    } catch (err) {
+      console.error('Error fetching deleted products:', err);
+      return [];
     }
   };
 
@@ -356,11 +406,11 @@ export function useMenu(options: UseMenuOptions = {}) {
     }
   };
 
+  /** Moves a variation to the Recently Deleted bin. See deleteProduct. */
   const deleteVariation = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('product_variations')
-        .delete()
+      const { error } = await (supabase.from('product_variations') as any)
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', id);
 
       if (error) throw error;
@@ -383,6 +433,8 @@ export function useMenu(options: UseMenuOptions = {}) {
     addProduct,
     updateProduct,
     deleteProduct,
+    restoreProduct,
+    fetchDeletedProducts,
     addVariation,
     updateVariation,
     deleteVariation
