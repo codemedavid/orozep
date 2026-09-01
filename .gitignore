@@ -25,3 +25,6 @@ dist-ssr
 .env
 supabase-export/.dbconn
 image-migration/.imagekit_key
+
+# Local DB snapshots — contain customer PII, never commit
+backups/

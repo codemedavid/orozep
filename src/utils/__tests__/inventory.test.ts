@@ -13,6 +13,7 @@ import {
   mockProductAllVariationsOutOfStock,
   mockVariation,
   mockVariationOutOfStock,
+  mockProductDeleted,
 } from '../../test/fixtures';
 
 describe('hasSellableStock', () => {
@@ -126,5 +127,40 @@ describe('filterStorefrontProducts', () => {
 
   it('handles an empty catalog without throwing', () => {
     expect(filterStorefrontProducts([])).toEqual([]);
+  });
+});
+
+describe('isVisibleOnStorefront — soft-deleted products', () => {
+  it('hides a product that is sitting in the Recently Deleted bin', () => {
+    // Arrange: prod-6 is available with stock, but has a deleted_at timestamp.
+    expect(mockProductDeleted.available).toBe(true);
+    expect(mockProductDeleted.stock_quantity).toBeGreaterThan(0);
+
+    // Act
+    const result = isVisibleOnStorefront(mockProductDeleted);
+
+    // Assert
+    expect(result).toBe(false);
+  });
+
+  it('shows the product again once it is restored from the bin', () => {
+    const restored: Product = { ...mockProductDeleted, deleted_at: null, deleted_by: null };
+
+    expect(isVisibleOnStorefront(restored)).toBe(true);
+  });
+
+  it('still shows products from before the soft-delete migration (no deleted_at column)', () => {
+    // Rows fetched by an older client have no deleted_at at all; they are live.
+    const { deleted_at: _a, deleted_by: _b, ...legacyRow } = mockProductDeleted;
+
+    expect(isVisibleOnStorefront(legacyRow as Product)).toBe(true);
+  });
+
+  it('drops soft-deleted products from the storefront catalog', () => {
+    const catalog = [mockProduct, mockProductDeleted, mockProductNoVariations];
+
+    const visible = filterStorefrontProducts(catalog);
+
+    expect(visible.map((p) => p.id)).toEqual(['prod-1', 'prod-2']);
   });
 });

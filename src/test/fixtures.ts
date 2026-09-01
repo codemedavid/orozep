@@ -167,3 +167,14 @@ export const mockCartItemNoVariation: CartItem = {
   product: mockProductNoVariations,
   quantity: 1,
 };
+
+// Soft-deleted product: still a row in the database, sitting in the Recently
+// Deleted bin. It must never reach the storefront, but the admin recycle bin
+// needs it visible in order to offer a restore.
+export const mockProductDeleted: Product = {
+  ...mockProductNoVariations,
+  id: 'prod-6',
+  name: 'Retatrutide 10mg',
+  deleted_at: '2026-08-30T00:00:00Z',
+  deleted_by: 'admin',
+};
