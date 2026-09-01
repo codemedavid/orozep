@@ -118,17 +118,12 @@ describe('useOrders — deleting sends orders to the bin', () => {
     expect(callsFor('update')).toHaveLength(0);
   });
 
-  it('sends every order to the bin rather than emptying the table', async () => {
+  it('exposes no way to remove every order at once', async () => {
     const { result } = await loadHook();
 
-    await act(async () => {
-      await result.current.deleteAllOrders();
-    });
-
-    expect(callsFor('delete')).toHaveLength(0);
-    const updates = callsFor('update');
-    expect(updates).toHaveLength(1);
-    expect((updates[0].args[0] as Record<string, unknown>).deleted_at).toEqual(expect.any(String));
+    // Deliberately absent. A one-click wipe of the orders table has no
+    // legitimate operational use and this store has been emptied twice.
+    expect(Object.keys(result.current)).not.toContain('deleteAllOrders');
   });
 });
 

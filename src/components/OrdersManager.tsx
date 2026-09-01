@@ -29,7 +29,6 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
     setSearchQuery,
     refresh,
     deleteOrders,
-    deleteAllOrders,
     fetchDeletedOrders,
     restoreOrder,
   } = useOrders();
@@ -97,28 +96,6 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
       alert(`${selectedCount} order(s) moved to Recently Deleted.`);
     } else {
       alert(result.error ?? 'Failed to delete selected orders. Please try again.');
-    }
-  };
-
-  const handleDeleteAllOrders = async () => {
-    if (totalCount === 0) return;
-    const confirmed = await confirmDelete({
-      itemName: 'DELETE ALL ORDERS',
-      title: `Delete ALL ${totalCount} orders?`,
-      description: `Every order moves to Recently Deleted, with its customer details and payment proof, and can be restored for ${RECYCLE_BIN_RETENTION_DAYS} days.`,
-      confirmLabel: 'Delete',
-    });
-    if (!confirmed) return;
-
-    setIsProcessing(true);
-    const result = await deleteAllOrders();
-    setIsProcessing(false);
-
-    if (result.success) {
-      setSelectedOrderIds(new Set());
-      alert('All orders moved to Recently Deleted.');
-    } else {
-      alert(result.error ?? 'Failed to delete all orders. Please try again.');
     }
   };
 
@@ -663,14 +640,6 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
               >
                 <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
                 Delete Selected{selectedOrderIds.size > 0 ? ` (${selectedOrderIds.size})` : ''}
-              </button>
-              <button
-                onClick={handleDeleteAllOrders}
-                disabled={totalCount === 0 || isProcessing}
-                className="px-3 md:px-4 py-1.5 md:py-2 bg-red-700 hover:bg-red-800 text-white rounded-lg transition-colors font-medium text-xs md:text-sm flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
-              >
-                <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                Delete All Orders
               </button>
             </div>
           </div>

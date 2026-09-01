@@ -94,7 +94,6 @@ function setupHook(binContents: unknown[][] = [[BINNED_RECENT, BINNED_NEARLY_PUR
     setSearchQuery: vi.fn(),
     refresh: vi.fn(async () => {}),
     deleteOrders: vi.fn(async () => ({ success: true })),
-    deleteAllOrders: vi.fn(async () => ({ success: true })),
     fetchDeletedOrders,
     restoreOrder,
   });
@@ -193,12 +192,27 @@ describe('OrdersManager — Recently Deleted', () => {
   });
 });
 
+describe('OrdersManager — there is no way to wipe every order', () => {
+  it('offers no delete-all control at all', async () => {
+    render(<OrdersManager onBack={vi.fn()} />);
+
+    await screen.findByText(/ORZ-001/);
+
+    // Removed outright rather than guarded. A single control that empties the
+    // orders table has no legitimate day-to-day use, and the store has been
+    // wiped twice already.
+    expect(screen.queryByRole('button', { name: /delete all/i })).toBeNull();
+    expect(screen.queryByText(/delete all orders/i)).toBeNull();
+  });
+});
+
 describe('OrdersManager — deletion prompts now tell the truth', () => {
   it('says a deleted order is recoverable, because it is', async () => {
     const user = userEvent.setup();
     render(<OrdersManager onBack={vi.fn()} />);
 
-    await user.click(await screen.findByRole('button', { name: /delete all/i }));
+    await user.click(await screen.findByLabelText(/select page/i));
+    await user.click(screen.getByRole('button', { name: /delete selected/i }));
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(/recently deleted|restored|recover/i)).toBeInTheDocument();

@@ -35,8 +35,10 @@ Two details worth recording:
 - **The status-count tiles filter the bin too.** The paged list and the seven
   head-count queries all apply `deleted_at IS NULL`. Filtering only the list
   would leave the tiles claiming orders the table below cannot show.
-- **`deleteAllOrders` bins only live rows.** Re-stamping an already binned order
-  would reset its countdown and quietly extend the retention window past 30 days.
+- **The bulk wipe was removed outright.** `deleteAllOrders` and its button are
+  gone from both the hook and the UI: a single control that empties the orders
+  table has no legitimate day-to-day use, and this store has been emptied twice.
+  Guard tests assert neither the control nor the hook function comes back.
 
 Validation: `npx vitest run src/hooks/__tests__/useOrders.softDelete.test.ts`
 RED: 11 failed (11).
@@ -92,7 +94,7 @@ two neutral phrases for rows with no readable stamp.
 | 4 | Deleting stamps a parseable `deleted_at` | `useOrders.softDelete.test.ts` | integration | PASS |
 | 5 | Only the selected order ids are targeted | `useOrders.softDelete.test.ts` | integration | PASS |
 | 6 | An empty selection issues no query at all | `useOrders.softDelete.test.ts` | integration | PASS |
-| 7 | "Delete all" bins every order instead of emptying the table | `useOrders.softDelete.test.ts` | integration | PASS |
+| 7 | The hook exposes no way to remove every order at once | `useOrders.softDelete.test.ts` | integration | PASS |
 | 8 | The bin is read newest-removal-first | `useOrders.softDelete.test.ts` | integration | PASS |
 | 9 | Restoring clears `deleted_at` and `deleted_by` on that order only | `useOrders.softDelete.test.ts` | integration | PASS |
 | 10 | Order Management offers a way into the bin | `OrdersManager.trash.test.tsx` | component | PASS |
@@ -104,6 +106,7 @@ two neutral phrases for rows with no readable stamp.
 | 16 | The admin can return to the orders list | `OrdersManager.trash.test.tsx` | component | PASS |
 | 17 | The bin offers no permanent purge | `OrdersManager.trash.test.tsx` | component | PASS |
 | 18 | The delete prompt says orders are recoverable | `OrdersManager.trash.test.tsx` | component | PASS |
+| 18b | Order Management offers no delete-all control | `OrdersManager.trash.test.tsx` | component | PASS |
 | 19-24 | Countdown label: plural, singular, elapsed, long-expired, unreadable, never-deleted | `recycleBin.test.ts` | unit | PASS |
 
 ## Coverage

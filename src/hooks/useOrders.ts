@@ -105,8 +105,6 @@ export interface UseOrdersResult {
   refresh: () => Promise<void>;
   /** Moves the given orders to the Recently Deleted bin. */
   deleteOrders: (ids: string[]) => Promise<{ success: boolean; error?: string }>;
-  /** Moves every live order to the bin. */
-  deleteAllOrders: () => Promise<{ success: boolean; error?: string }>;
   /** Contents of the bin, newest removal first. */
   fetchDeletedOrders: () => Promise<Order[]>;
   /** Brings one order back out of the bin. */
@@ -272,24 +270,6 @@ export function useOrders(): UseOrdersResult {
     [refresh],
   );
 
-  const deleteAllOrders = useCallback(async () => {
-    try {
-      const { error: updateError } = await (supabase.from('orders') as any)
-        .update({ deleted_at: new Date().toISOString() })
-        // Only the live ones; re-binning an already binned order would reset
-        // its countdown and quietly extend the retention window.
-        .is('deleted_at', null);
-
-      if (updateError) throw updateError;
-
-      await refresh();
-      return { success: true };
-    } catch (err) {
-      console.error('Error deleting all orders:', err);
-      return { success: false, error: err instanceof Error ? err.message : 'Failed to delete all orders.' };
-    }
-  }, [refresh]);
-
   const fetchDeletedOrders = useCallback(async (): Promise<Order[]> => {
     try {
       const { data, error: queryError } = await supabase
@@ -349,7 +329,6 @@ export function useOrders(): UseOrdersResult {
     setSearchQuery,
     refresh,
     deleteOrders,
-    deleteAllOrders,
     fetchDeletedOrders,
     restoreOrder,
   };
