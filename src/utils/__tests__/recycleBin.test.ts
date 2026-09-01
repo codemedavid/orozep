@@ -7,6 +7,7 @@ import {
   daysUntilPurge,
   isPurgeable,
 } from '../recycleBin';
+import type { SoftDeletable } from '../recycleBin';
 
 const NOW = new Date('2026-09-01T00:00:00Z');
 
@@ -32,7 +33,7 @@ describe('isDeleted', () => {
 
   it('treats a row with no deleted_at column at all as not deleted', () => {
     // Rows fetched before the soft-delete migration landed have no such column.
-    expect(isDeleted({ id: 'prod-1' })).toBe(false);
+    expect(isDeleted({ id: 'prod-1' } as SoftDeletable)).toBe(false);
   });
 
   it('treats an empty deleted_at string as not deleted', () => {
@@ -82,7 +83,7 @@ describe('partitionByDeletion', () => {
   });
 
   it('puts every row in active when nothing is deleted', () => {
-    const rows = [{ id: 'a' }, { id: 'b', deleted_at: null }];
+    const rows: SoftDeletable[] = [{}, { deleted_at: null }];
 
     const { active, deleted } = partitionByDeletion(rows);
 

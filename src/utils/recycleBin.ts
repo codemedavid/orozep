@@ -26,13 +26,13 @@ const MS_PER_DAY = 86_400_000;
  * that will not parse as a date. Hiding a row we cannot date is safe; showing a
  * deleted product on the storefront is not.
  */
-export function isDeleted(row: SoftDeletable): boolean {
+export function isDeleted<T extends SoftDeletable>(row: T): boolean {
   const stamp = row.deleted_at;
   return typeof stamp === 'string' && stamp.trim() !== '';
 }
 
 /** True when the row is live — the inverse of {@link isDeleted}. */
-export function isActive(row: SoftDeletable): boolean {
+export function isActive<T extends SoftDeletable>(row: T): boolean {
   return !isDeleted(row);
 }
 
@@ -55,7 +55,7 @@ export function partitionByDeletion<T extends SoftDeletable>(
 }
 
 /** Milliseconds of the deletion stamp, or null when absent or unreadable. */
-function parseDeletedAt(row: SoftDeletable): number | null {
+function parseDeletedAt<T extends SoftDeletable>(row: T): number | null {
   if (!isDeleted(row)) return null;
 
   const parsed = Date.parse(row.deleted_at as string);
@@ -66,7 +66,7 @@ function parseDeletedAt(row: SoftDeletable): number | null {
  * Days left before the row may be purged, clamped to zero. Null when the row is
  * live, or when its stamp cannot be read — both mean "no countdown to show".
  */
-export function daysUntilPurge(row: SoftDeletable, now: Date = new Date()): number | null {
+export function daysUntilPurge<T extends SoftDeletable>(row: T, now: Date = new Date()): number | null {
   const deletedAt = parseDeletedAt(row);
   if (deletedAt === null) return null;
 
@@ -78,6 +78,6 @@ export function daysUntilPurge(row: SoftDeletable, now: Date = new Date()): numb
  * True only when the retention window has fully elapsed. A row whose stamp
  * cannot be read is never purgeable — it is surfaced for a human instead.
  */
-export function isPurgeable(row: SoftDeletable, now: Date = new Date()): boolean {
+export function isPurgeable<T extends SoftDeletable>(row: T, now: Date = new Date()): boolean {
   return daysUntilPurge(row, now) === 0;
 }
