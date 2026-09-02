@@ -12,7 +12,7 @@ vi.mock('../../lib/supabase', () => ({
   },
 }));
 
-import { useOrders } from '../useOrders';
+import { useOrders, ORDERS_FETCH_CHUNK_SIZE } from '../useOrders';
 
 const TOTAL = 1234;
 // Per-status counts returned by the head-count queries.
@@ -39,7 +39,14 @@ interface RecordedCalls {
 const builders: RecordedCalls[] = [];
 
 // Tunable behaviour of the list (non-head) query, mutated per test.
-let listConfig: { count: number; error: unknown; deferred: boolean };
+// `rowsForRange` lets a test model a table larger than one API response so the
+// chunked "fetch everything" loop can be observed end to end.
+let listConfig: {
+  count: number;
+  error: unknown;
+  deferred: boolean;
+  rowsForRange?: (from: number, to: number) => unknown[];
+};
 // When deferred, list resolutions queue here so a test can flush them in a
 // chosen order (used to reproduce out-of-order fetch races).
 const pending: Array<() => void> = [];
@@ -84,12 +91,15 @@ function makeBuilder() {
     }
     // list query → rows tagged with the active status filter, plus the total.
     const statusEq = calls.eq.find(([c]) => c === 'order_status');
-    const rows = statusEq
-      ? [{ id: `o-${statusEq[1]}`, order_status: statusEq[1], created_at: '2026-01-01T00:00:00Z' }]
-      : [
-          { id: 'o1', order_status: 'new', created_at: '2026-01-02T00:00:00Z' },
-          { id: 'o2', order_status: 'confirmed', created_at: '2026-01-01T00:00:00Z' },
-        ];
+    const [from, to] = calls.range ?? [0, 0];
+    const rows = listConfig.rowsForRange
+      ? listConfig.rowsForRange(from, to)
+      : statusEq
+        ? [{ id: `o-${statusEq[1]}`, order_status: statusEq[1], created_at: '2026-01-01T00:00:00Z' }]
+        : [
+            { id: 'o1', order_status: 'new', created_at: '2026-01-02T00:00:00Z' },
+            { id: 'o2', order_status: 'confirmed', created_at: '2026-01-01T00:00:00Z' },
+          ];
     const result = { data: rows, error: listConfig.error, count: listConfig.count };
     if (listConfig.deferred) {
       pending.push(() => onFulfilled(result));
@@ -106,16 +116,31 @@ function lastListQuery(): RecordedCalls | undefined {
   return [...builders].reverse().find((b) => !b.options?.head);
 }
 
+/** Every range requested by a list (non-head) query, in issue order. */
+function listRanges(): Array<[number, number]> {
+  return builders.filter((b) => !b.options?.head && b.range).map((b) => b.range!);
+}
+
+/** Builds `count` fake rows covering the inclusive PostgREST range. */
+function rowsInRange(total: number) {
+  return (from: number, to: number) =>
+    Array.from({ length: Math.max(0, Math.min(to, total - 1) - from + 1) }, (_, i) => ({
+      id: `o${from + i}`,
+      order_status: 'new',
+      created_at: '2026-01-01T00:00:00Z',
+    }));
+}
+
 beforeEach(() => {
   builders.length = 0;
   pending.length = 0;
-  listConfig = { count: TOTAL, error: null, deferred: false };
+  listConfig = { count: TOTAL, error: null, deferred: false, rowsForRange: undefined };
   fromMock.mockReset();
   fromMock.mockImplementation(() => makeBuilder());
 });
 
 describe('useOrders', () => {
-  it('loads the first page of 50 orders sorted by created_at desc', async () => {
+  it('loads every order sorted by created_at desc in a single pass', async () => {
     const { result } = renderHook(() => useOrders());
 
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -123,7 +148,8 @@ describe('useOrders', () => {
     const list = lastListQuery();
     expect(list?.options).toEqual({ count: 'exact' });
     expect(list?.order).toEqual(['created_at', { ascending: false }]);
-    expect(list?.range).toEqual([0, 49]);
+    // One full-size chunk, not a 50-row page.
+    expect(list?.range).toEqual([0, ORDERS_FETCH_CHUNK_SIZE - 1]);
     expect(result.current.orders).toHaveLength(2);
     expect(result.current.totalCount).toBe(TOTAL);
   });
@@ -136,19 +162,16 @@ describe('useOrders', () => {
     expect(list?.eq.find(([c]) => c === 'order_status')).toBeUndefined();
   });
 
-  it('applies a server-side status filter and resets to page 1', async () => {
+  it('applies a server-side status filter and refetches the whole filtered set', async () => {
     const { result } = renderHook(() => useOrders());
     await waitFor(() => expect(result.current.loading).toBe(false));
-
-    act(() => result.current.setPage(3));
-    await waitFor(() => expect(lastListQuery()?.range).toEqual([100, 149]));
 
     act(() => result.current.setStatusFilter('shipped'));
 
     await waitFor(() => {
       const list = lastListQuery();
       expect(list?.eq).toContainEqual(['order_status', 'shipped']);
-      expect(list?.range).toEqual([0, 49]); // page reset
+      expect(list?.range).toEqual([0, ORDERS_FETCH_CHUNK_SIZE - 1]);
     });
   });
 
@@ -167,13 +190,34 @@ describe('useOrders', () => {
     });
   });
 
-  it('paginates via range() when the page changes', async () => {
+  it('returns every order on one page, chunking past the API row cap', async () => {
+    const total = ORDERS_FETCH_CHUNK_SIZE * 2 + 17;
+    listConfig.count = total;
+    listConfig.rowsForRange = rowsInRange(total);
+
     const { result } = renderHook(() => useOrders());
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    act(() => result.current.setPage(2));
+    expect(result.current.orders).toHaveLength(total);
+    expect(result.current.orders[0]?.id).toBe('o0');
+    expect(result.current.orders[total - 1]?.id).toBe(`o${total - 1}`);
+    expect(listRanges()).toEqual([
+      [0, ORDERS_FETCH_CHUNK_SIZE - 1],
+      [ORDERS_FETCH_CHUNK_SIZE, ORDERS_FETCH_CHUNK_SIZE * 2 - 1],
+      [ORDERS_FETCH_CHUNK_SIZE * 2, ORDERS_FETCH_CHUNK_SIZE * 3 - 1],
+    ]);
+  });
 
-    await waitFor(() => expect(lastListQuery()?.range).toEqual([50, 99]));
+  it('stops requesting chunks as soon as a short one comes back', async () => {
+    const total = ORDERS_FETCH_CHUNK_SIZE + 5;
+    listConfig.count = total;
+    listConfig.rowsForRange = rowsInRange(total);
+
+    const { result } = renderHook(() => useOrders());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.orders).toHaveLength(total);
+    expect(listRanges()).toHaveLength(2);
   });
 
   it('loads per-status counts via head-count queries', async () => {
@@ -186,12 +230,15 @@ describe('useOrders', () => {
     });
   });
 
-  it('exposes totalPages derived from the total count and page size', async () => {
+  it('exposes no pagination surface at all', async () => {
     const { result } = renderHook(() => useOrders());
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    // ceil(1234 / 50) = 25
-    expect(result.current.totalPages).toBe(25);
+    const api = result.current as Record<string, unknown>;
+    expect(api.page).toBeUndefined();
+    expect(api.setPage).toBeUndefined();
+    expect(api.totalPages).toBeUndefined();
+    expect(api.pageSize).toBeUndefined();
   });
 
   // ---- Fixes for review findings ----
@@ -211,22 +258,22 @@ describe('useOrders', () => {
     });
   });
 
-  it('clamps the page when the total shrinks below the current page (after deletions)', async () => {
+  it('still shows the whole list after deletions shrink the total', async () => {
+    listConfig.count = ORDERS_FETCH_CHUNK_SIZE + 5;
+    listConfig.rowsForRange = rowsInRange(ORDERS_FETCH_CHUNK_SIZE + 5);
+
     const { result } = renderHook(() => useOrders());
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await waitFor(() => expect(result.current.orders).toHaveLength(ORDERS_FETCH_CHUNK_SIZE + 5));
 
-    act(() => result.current.setPage(5));
-    await waitFor(() => expect(lastListQuery()?.range).toEqual([200, 249]));
-
-    // Deletions drop the total to a single page while we sit on page 5.
-    listConfig.count = 10;
+    listConfig.count = 3;
+    listConfig.rowsForRange = rowsInRange(3);
     await act(async () => {
       await result.current.refresh();
     });
 
     await waitFor(() => {
-      expect(result.current.page).toBe(1);
-      expect(lastListQuery()?.range).toEqual([0, 49]);
+      expect(result.current.orders).toHaveLength(3);
+      expect(result.current.totalCount).toBe(3);
     });
   });
 

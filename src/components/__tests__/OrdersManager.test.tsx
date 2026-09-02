@@ -10,7 +10,6 @@ const { useOrdersMock, useCouriersMock } = vi.hoisted(() => ({
 
 vi.mock('../../hooks/useOrders', () => ({
   useOrders: () => useOrdersMock(),
-  ORDERS_PAGE_SIZE: 50,
 }));
 vi.mock('../../hooks/useMenu', () => ({
   useMenu: () => ({ refreshProducts: vi.fn() }),
@@ -60,14 +59,11 @@ function hookValue(overrides: Record<string, unknown> = {}) {
   return {
     orders: [],
     loading: false,
-    page: 1,
-    totalPages: 1,
     totalCount: 0,
     statusCounts: { all: 0, new: 0, confirmed: 0, processing: 0, shipped: 0, delivered: 0, cancelled: 0 },
     statusFilter: 'all',
     searchQuery: '',
     error: null,
-    setPage: vi.fn(),
     setStatusFilter: vi.fn(),
     setSearchQuery: vi.fn(),
     refresh: vi.fn(),
@@ -88,7 +84,7 @@ const JNT_COURIER = {
 
 async function openOrderDetails(order = SAMPLE_ORDER) {
   const user = userEvent.setup();
-  useOrdersMock.mockReturnValue(hookValue({ orders: [order], totalCount: 1, totalPages: 1 }));
+  useOrdersMock.mockReturnValue(hookValue({ orders: [order], totalCount: 1 }));
 
   render(<OrdersManager onBack={() => {}} />);
   await user.click(screen.getByRole('button', { name: /view details/i }));
@@ -115,7 +111,7 @@ describe('OrdersManager', () => {
 
   it('keeps the orders list visible during a background refresh (no full-page spinner)', () => {
     useOrdersMock.mockReturnValue(
-      hookValue({ loading: true, orders: [SAMPLE_ORDER], totalCount: 1, totalPages: 1 }),
+      hookValue({ loading: true, orders: [SAMPLE_ORDER], totalCount: 1 }),
     );
 
     render(<OrdersManager onBack={() => {}} />);
@@ -124,6 +120,31 @@ describe('OrdersManager', () => {
     expect(screen.getByText('Jane Dela Cruz')).toBeInTheDocument();
     // ...and the initial-load full-page spinner must NOT take over.
     expect(screen.queryByText(/loading orders/i)).not.toBeInTheDocument();
+  });
+
+  it('lists every order on one page with no next/prev controls', () => {
+    const orders = Array.from({ length: 3 }, (_, i) => ({
+      ...SAMPLE_ORDER,
+      id: `order-${i}`,
+      order_number: `ORD-00${i}`,
+      customer_name: `Customer ${i}`,
+    }));
+    useOrdersMock.mockReturnValue(hookValue({ orders, totalCount: orders.length }));
+
+    render(<OrdersManager onBack={() => {}} />);
+
+    orders.forEach((o) => expect(screen.getByText(o.customer_name)).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: /next/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /prev/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/page \d+ of \d+/i)).not.toBeInTheDocument();
+  });
+
+  it('summarises the full list instead of a page range', () => {
+    useOrdersMock.mockReturnValue(hookValue({ orders: [SAMPLE_ORDER], totalCount: 1234 }));
+
+    render(<OrdersManager onBack={() => {}} />);
+
+    expect(screen.getByText(/showing all/i)).toHaveTextContent('1,234');
   });
 
   it('shows the full-page spinner only on the initial load (loading with no orders yet)', () => {
