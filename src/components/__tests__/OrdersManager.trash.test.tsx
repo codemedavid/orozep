@@ -6,7 +6,6 @@ const { useOrdersMock } = vi.hoisted(() => ({ useOrdersMock: vi.fn() }));
 
 vi.mock('../../hooks/useOrders', () => ({
   useOrders: () => useOrdersMock(),
-  ORDERS_PAGE_SIZE: 50,
   ORDER_STATUSES: ['new', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'],
 }));
 vi.mock('../../hooks/useMenu', () => ({ useMenu: () => ({ refreshProducts: vi.fn() }) }));
@@ -81,15 +80,11 @@ function setupHook(binContents: unknown[][] = [[BINNED_RECENT, BINNED_NEARLY_PUR
   useOrdersMock.mockReturnValue({
     orders: [order()],
     loading: false,
-    page: 1,
-    pageSize: 50,
     totalCount: 1,
-    totalPages: 1,
     statusCounts: { all: 1, new: 1, confirmed: 0, processing: 0, shipped: 0, delivered: 0, cancelled: 0 },
     statusFilter: 'all',
     searchQuery: '',
     error: null,
-    setPage: vi.fn(),
     setStatusFilter: vi.fn(),
     setSearchQuery: vi.fn(),
     refresh: vi.fn(async () => {}),
