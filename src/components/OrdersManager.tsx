@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Package, CheckCircle, XCircle, Clock, Truck, AlertCircle, Search, RefreshCw, Eye, MessageCircle, Image as ImageIcon, Trash2, ChevronLeft, ChevronRight, ArchiveRestore, Archive, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Package, CheckCircle, XCircle, Clock, Truck, AlertCircle, Search, RefreshCw, Eye, MessageCircle, Image as ImageIcon, Trash2, ArchiveRestore, Archive, RotateCcw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { daysUntilPurge, purgeCountdownLabel, RECYCLE_BIN_RETENTION_DAYS } from '../utils/recycleBin';
 import { useConfirmDelete } from '../hooks/useConfirmDelete';
 import ConfirmDeleteDialog from './ConfirmDeleteDialog';
 import { useMenu } from '../hooks/useMenu';
 import { useCouriers } from '../hooks/useCouriers';
-import { useOrders, ORDERS_PAGE_SIZE, type Order } from '../hooks/useOrders';
+import { useOrders, type Order } from '../hooks/useOrders';
 import { resolveCourierCode } from '../lib/couriers';
 
 interface OrdersManagerProps {
@@ -17,14 +17,11 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
   const {
     orders,
     loading,
-    page,
-    totalPages,
     totalCount,
     statusCounts,
     statusFilter,
     searchQuery,
     error,
-    setPage,
     setStatusFilter,
     setSearchQuery,
     refresh,
@@ -45,11 +42,11 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
   const [binError, setBinError] = useState<string | null>(null);
   const { refreshProducts } = useMenu();
 
-  // Clear the selection whenever the visible page of orders changes so we
+  // Clear the selection whenever the visible set of orders changes so we
   // never hold ids that are no longer on screen.
   useEffect(() => {
     setSelectedOrderIds(new Set());
-  }, [page, statusFilter, searchQuery]);
+  }, [statusFilter, searchQuery]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -302,7 +299,7 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
 
       if (error) throw error;
 
-      // Re-fetch the current page so the list reflects the saved tracking info.
+      // Re-fetch the list so it reflects the saved tracking info.
       await refresh();
 
       if (selectedOrder?.id === orderId) {
@@ -668,39 +665,11 @@ const OrdersManager: React.FC<OrdersManagerProps> = ({ onBack }) => {
           )}
         </div>
 
-        {/* Pagination */}
+        {/* List total — the whole set is on screen, so there is nothing to page through. */}
         {totalCount > 0 && (
-          <div className="mt-4 md:mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white rounded-lg md:rounded-xl shadow-md p-3 md:p-4 border border-navy-700/30">
-            <p className="text-xs md:text-sm text-gray-600">
-              Showing{' '}
-              <span className="font-semibold text-gray-900">{(page - 1) * ORDERS_PAGE_SIZE + 1}</span>
-              {'–'}
-              <span className="font-semibold text-gray-900">{Math.min(page * ORDERS_PAGE_SIZE, totalCount)}</span>
-              {' of '}
-              <span className="font-semibold text-gray-900">{totalCount.toLocaleString()}</span> orders
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage(Math.max(1, page - 1))}
-                disabled={page <= 1}
-                className="px-3 py-1.5 md:py-2 bg-navy-900 hover:bg-navy-800 text-white rounded-lg font-medium text-xs md:text-sm flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                <span className="hidden sm:inline">Prev</span>
-              </button>
-              <span className="text-xs md:text-sm text-gray-700 font-medium px-1">
-                Page {page} of {totalPages}
-              </span>
-              <button
-                onClick={() => setPage(Math.min(totalPages, page + 1))}
-                disabled={page >= totalPages}
-                className="px-3 py-1.5 md:py-2 bg-navy-900 hover:bg-navy-800 text-white rounded-lg font-medium text-xs md:text-sm flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                <span className="hidden sm:inline">Next</span>
-                <ChevronRight className="w-3.5 h-3.5 md:w-4 md:h-4" />
-              </button>
-            </div>
-          </div>
+          <p className="mt-4 md:mt-6 text-center text-xs md:text-sm text-gray-600">
+            Showing all <span className="font-semibold text-gray-900">{totalCount.toLocaleString()}</span> orders
+          </p>
         )}
       </div>
       <ConfirmDeleteDialog {...confirmDialogProps} />

@@ -72,9 +72,10 @@ const EMPTY_COUNTS: StatusCounts = {
   cancelled: 0,
 };
 
-/** Rows fetched per page. The list query never returns more than this,
- *  so the table can grow past PostgREST's 1000-row response cap. */
-export const ORDERS_PAGE_SIZE = 50;
+/** Rows pulled per request while assembling the full list. PostgREST caps a
+ *  single response at 1000 rows, so a larger table is walked in chunks of this
+ *  size and stitched back together — the admin still sees one unbroken list. */
+export const ORDERS_FETCH_CHUNK_SIZE = 1000;
 
 const SEARCH_DEBOUNCE_MS = 350;
 
@@ -91,15 +92,11 @@ function sanitizeSearch(query: string): string {
 export interface UseOrdersResult {
   orders: Order[];
   loading: boolean;
-  page: number;
-  pageSize: number;
   totalCount: number;
-  totalPages: number;
   statusCounts: StatusCounts;
   statusFilter: string;
   searchQuery: string;
   error: string | null;
-  setPage: (page: number) => void;
   setStatusFilter: (status: string) => void;
   setSearchQuery: (query: string) => void;
   refresh: () => Promise<void>;
@@ -112,15 +109,17 @@ export interface UseOrdersResult {
 }
 
 /**
- * Owns all server-side querying for the orders table: paginated list
- * fetches, status filtering, debounced search, and per-status counts.
- * Only one page of rows is ever held in memory, keeping egress bounded
- * and sidestepping the 1000-row API cap that hid older orders.
+ * Owns all server-side querying for the orders table: the full list fetch,
+ * status filtering, debounced search, and per-status counts.
+ *
+ * The list is never paginated for the admin — every matching order comes back
+ * in one pass. The API's 1000-row response cap is handled internally by
+ * walking the result set in chunks, which is what previously forced older
+ * orders onto a second page.
  */
 export function useOrders(): UseOrdersResult {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [statusFilter, setStatusFilterState] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -130,33 +129,30 @@ export function useOrders(): UseOrdersResult {
 
   // Monotonic id so an older in-flight list request can't overwrite a newer one.
   const requestIdRef = useRef(0);
-  // Last effective search term applied, to avoid resetting the page spuriously
+  // Last effective search term applied, to avoid refetching spuriously
   // (e.g. on mount, or when a keystroke debounces to an unchanged value).
   const lastSearchRef = useRef('');
 
-  // Debounce the search box, and reset to page 1 only when the effective term
-  // actually changes so the user always lands on the first page of new results.
+  // Debounce the search box, refetching only when the effective term actually
+  // changes (so an unchanged keystroke doesn't re-pull the whole list).
   useEffect(() => {
     const trimmed = searchQuery.trim();
     const id = setTimeout(() => {
       if (lastSearchRef.current === trimmed) return;
       lastSearchRef.current = trimmed;
       setDebouncedSearch(trimmed);
-      setPage(1);
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(id);
   }, [searchQuery]);
 
-  // Changing the status filter resets pagination immediately (no debounce).
   const setStatusFilter = useCallback((status: string) => {
     setStatusFilterState(status);
-    setPage(1);
   }, []);
 
-  const loadPage = useCallback(async () => {
-    const requestId = ++requestIdRef.current;
-    setLoading(true);
-    try {
+  /** One chunk of the list query. A fresh builder is required per request
+   *  because a PostgREST builder can only be awaited once. */
+  const listChunkQuery = useCallback(
+    (from: number) => {
       let query = supabase
         .from('orders')
         .select('*', { count: 'exact' })
@@ -180,17 +176,36 @@ export function useOrders(): UseOrdersResult {
         );
       }
 
-      const from = (page - 1) * ORDERS_PAGE_SIZE;
-      const to = from + ORDERS_PAGE_SIZE - 1;
-      query = query.range(from, to);
+      return query.range(from, from + ORDERS_FETCH_CHUNK_SIZE - 1);
+    },
+    [statusFilter, debouncedSearch],
+  );
 
-      const { data, error: queryError, count } = await query;
-      // A newer request superseded this one — drop the stale result.
-      if (requestId !== requestIdRef.current) return;
-      if (queryError) throw queryError;
+  const loadOrders = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
+    setLoading(true);
+    try {
+      const all: Order[] = [];
+      let count = 0;
 
-      setOrders((data as Order[]) ?? []);
-      setTotalCount(count ?? 0);
+      // Keep pulling chunks until the server returns a short one. A short chunk
+      // is the only reliable end-of-list signal: `count` can move under us if
+      // orders arrive mid-walk.
+      for (;;) {
+        const { data, error: queryError, count: chunkCount } = await listChunkQuery(all.length);
+        // A newer request superseded this one — drop the stale result.
+        if (requestId !== requestIdRef.current) return;
+        if (queryError) throw queryError;
+
+        const rows = (data as Order[]) ?? [];
+        all.push(...rows);
+        count = chunkCount ?? all.length;
+
+        if (rows.length < ORDERS_FETCH_CHUNK_SIZE) break;
+      }
+
+      setOrders(all);
+      setTotalCount(count);
       setError(null);
     } catch (err) {
       if (requestId !== requestIdRef.current) return;
@@ -201,7 +216,7 @@ export function useOrders(): UseOrdersResult {
     } finally {
       if (requestId === requestIdRef.current) setLoading(false);
     }
-  }, [page, statusFilter, debouncedSearch]);
+  }, [listChunkQuery]);
 
   const loadStatusCounts = useCallback(async () => {
     // head:true returns only the count (no rows), so each of these is a
@@ -233,16 +248,16 @@ export function useOrders(): UseOrdersResult {
   }, []);
 
   useEffect(() => {
-    loadPage();
-  }, [loadPage]);
+    loadOrders();
+  }, [loadOrders]);
 
   useEffect(() => {
     loadStatusCounts();
   }, [loadStatusCounts]);
 
   const refresh = useCallback(async () => {
-    await Promise.all([loadPage(), loadStatusCounts()]);
-  }, [loadPage, loadStatusCounts]);
+    await Promise.all([loadOrders(), loadStatusCounts()]);
+  }, [loadOrders, loadStatusCounts]);
 
   /**
    * Removal is an UPDATE, never a DELETE. Orders carry customer details and
@@ -305,26 +320,14 @@ export function useOrders(): UseOrdersResult {
     [refresh],
   );
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / ORDERS_PAGE_SIZE));
-
-  // If deletions (or a filter change) shrink the result set below the current
-  // page, snap back into range so the user never lands on an empty page.
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
-
   return {
     orders,
     loading,
-    page,
-    pageSize: ORDERS_PAGE_SIZE,
     totalCount,
-    totalPages,
     statusCounts,
     statusFilter,
     searchQuery,
     error,
-    setPage,
     setStatusFilter,
     setSearchQuery,
     refresh,
